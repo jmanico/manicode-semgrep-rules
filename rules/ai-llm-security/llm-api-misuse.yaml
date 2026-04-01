@@ -221,16 +221,16 @@ rules:
       - pattern: |
           $ARGS = JSON.parse($TOOL_CALL.function.arguments)
           ...
-          eval($ARGS. ...)
+          eval($ARGS[$KEY])
       - pattern: |
           $ARGS = JSON.parse($TOOL_CALL.function.arguments)
           ...
-          eval($ARGS[...])
+          eval($ARGS.$KEY)
       - pattern: |
           $ARGS = JSON.parse($TOOL_CALL.function.arguments)
           ...
-          exec($ARGS. ...)
+          exec($ARGS[$KEY])
       - pattern: |
           $ARGS = JSON.parse($TOOL_CALL.function.arguments)
           ...
-          execSync($ARGS. ...)
+          execSync($ARGS[$KEY])

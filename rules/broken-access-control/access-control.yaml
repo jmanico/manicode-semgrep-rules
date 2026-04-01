@@ -131,15 +131,19 @@ rules:
         - express
       references:
         - https://owasp.org/Top10/A01_2021-Broken_Access_Control/
-    pattern-either:
-      - pattern: $APP.get("=~/.*admin.*/", function($REQ, $RES) { ... })
-      - pattern: $APP.post("=~/.*admin.*/", function($REQ, $RES) { ... })
-      - pattern: $APP.put("=~/.*admin.*/", function($REQ, $RES) { ... })
-      - pattern: $APP.delete("=~/.*admin.*/", function($REQ, $RES) { ... })
-      - pattern: $APP.get("=~/.*admin.*/", ($REQ, $RES) => { ... })
-      - pattern: $APP.post("=~/.*admin.*/", ($REQ, $RES) => { ... })
-      - pattern: $APP.put("=~/.*admin.*/", ($REQ, $RES) => { ... })
-      - pattern: $APP.delete("=~/.*admin.*/", ($REQ, $RES) => { ... })
+    patterns:
+      - pattern-either:
+          - pattern: $APP.get($PATH, function($REQ, $RES) { ... })
+          - pattern: $APP.post($PATH, function($REQ, $RES) { ... })
+          - pattern: $APP.put($PATH, function($REQ, $RES) { ... })
+          - pattern: $APP.delete($PATH, function($REQ, $RES) { ... })
+          - pattern: $APP.get($PATH, ($REQ, $RES) => { ... })
+          - pattern: $APP.post($PATH, ($REQ, $RES) => { ... })
+          - pattern: $APP.put($PATH, ($REQ, $RES) => { ... })
+          - pattern: $APP.delete($PATH, ($REQ, $RES) => { ... })
+      - metavariable-regex:
+          metavariable: $PATH
+          regex: (?i).*(admin).*
 
   # ---------------------------------------------------------------
   # 5. FastAPI endpoint without Depends() for auth

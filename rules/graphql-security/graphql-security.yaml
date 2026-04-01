@@ -164,37 +164,37 @@ rules:
           - pattern: |
               ($PARENT, $ARGS, ...) => {
                 ...
-                $DB.query(`...${$ARGS. ...}...`);
+                $DB.query(`...${$ARGS.$FIELD}...`);
                 ...
               }
           - pattern: |
               ($PARENT, $ARGS, ...) => {
                 ...
-                $DB.query(`...${args. ...}...`);
+                $DB.query(`...${args.$FIELD}...`);
                 ...
               }
           - pattern: |
               async ($PARENT, $ARGS, ...) => {
                 ...
-                $DB.query(`...${$ARGS. ...}...`);
+                $DB.query(`...${$ARGS.$FIELD}...`);
                 ...
               }
           - pattern: |
               async ($PARENT, $ARGS, ...) => {
                 ...
-                $DB.query(`...${args. ...}...`);
+                $DB.query(`...${args.$FIELD}...`);
                 ...
               }
           - pattern: |
               function($PARENT, $ARGS, ...) {
                 ...
-                $DB.query(`...${$ARGS. ...}...`);
+                $DB.query(`...${$ARGS.$FIELD}...`);
                 ...
               }
           - pattern: |
               resolve($PARENT, $ARGS, ...) {
                 ...
-                $DB.query(`...${$ARGS. ...}...`);
+                $DB.query(`...${$ARGS.$FIELD}...`);
                 ...
               }
 

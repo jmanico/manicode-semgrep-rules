@@ -12,29 +12,32 @@ rules:
     languages: [python]
     patterns:
       - pattern: |
-          @$APP.route("=~/(?i).*(draft|unpublished|preview|embargo).*/", ...)
+          @$APP.route($PATH, ...)
           def $FUNC(...):
               ...
       - pattern-not: |
           @login_required
-          @$APP.route("=~/(?i).*(draft|unpublished|preview|embargo).*/", ...)
+          @$APP.route($PATH, ...)
           def $FUNC(...):
               ...
       - pattern-not: |
-          @$APP.route("=~/(?i).*(draft|unpublished|preview|embargo).*/", ...)
+          @$APP.route($PATH, ...)
           @login_required
           def $FUNC(...):
               ...
       - pattern-not: |
           @requires_auth
-          @$APP.route("=~/(?i).*(draft|unpublished|preview|embargo).*/", ...)
+          @$APP.route($PATH, ...)
           def $FUNC(...):
               ...
       - pattern-not: |
-          @$APP.route("=~/(?i).*(draft|unpublished|preview|embargo).*/", ...)
+          @$APP.route($PATH, ...)
           @requires_auth
           def $FUNC(...):
               ...
+      - metavariable-regex:
+          metavariable: $PATH
+          regex: (?i).*(draft|unpublished|preview|embargo).*
     metadata:
       category: security
       subcategory:
@@ -58,12 +61,15 @@ rules:
       - pattern: |
           def $FUNC($REQUEST, ...):
               ...
-              $MODEL.objects.filter(..., status="=~/(?i)(draft|unpublished)/", ...)
+              $MODEL.objects.filter(..., status=$STATUS, ...)
               ...
       - pattern-not: |
           @login_required
           def $FUNC($REQUEST, ...):
               ...
+      - metavariable-regex:
+          metavariable: $STATUS
+          regex: (?i).*(draft|unpublished).*
     metadata:
       category: security
       subcategory:
@@ -87,19 +93,22 @@ rules:
     patterns:
       - pattern-either:
           - pattern: |
-              $APP.get("=~/(?i).*(draft|unpublished|preview|embargo).*/", ($REQ, $RES) => {
+              $APP.get($PATH, ($REQ, $RES) => {
                   ...
               })
           - pattern: |
-              $APP.get("=~/(?i).*(draft|unpublished|preview|embargo).*/", function($REQ, $RES) {
+              $APP.get($PATH, function($REQ, $RES) {
                   ...
               })
           - pattern: |
-              $APP.get("=~/(?i).*(draft|unpublished|preview|embargo).*/", async ($REQ, $RES) => {
+              $APP.get($PATH, async ($REQ, $RES) => {
                   ...
               })
       - pattern-not: |
-          $APP.get("=~/(?i).*(draft|unpublished|preview|embargo).*/", $AUTH, ...)
+          $APP.get($PATH, $AUTH, ...)
+      - metavariable-regex:
+          metavariable: $PATH
+          regex: (?i).*(draft|unpublished|preview|embargo).*
     metadata:
       category: security
       subcategory:
@@ -178,37 +187,40 @@ rules:
     languages: [python]
     patterns:
       - pattern: |
-          @$APP.route("=~/(?i).*(admin|cms|editorial|manage).*/", ...)
+          @$APP.route($PATH, ...)
           def $FUNC(...):
               ...
       - pattern-not: |
-          @$APP.route("=~/(?i).*(admin|cms|editorial|manage).*/", ...)
+          @$APP.route($PATH, ...)
           def $FUNC(...):
               ...
               verify_mfa(...)
               ...
       - pattern-not: |
-          @$APP.route("=~/(?i).*(admin|cms|editorial|manage).*/", ...)
+          @$APP.route($PATH, ...)
           def $FUNC(...):
               ...
               check_2fa(...)
               ...
       - pattern-not: |
-          @$APP.route("=~/(?i).*(admin|cms|editorial|manage).*/", ...)
+          @$APP.route($PATH, ...)
           def $FUNC(...):
               ...
               verify_totp(...)
               ...
       - pattern-not: |
           @mfa_required
-          @$APP.route("=~/(?i).*(admin|cms|editorial|manage).*/", ...)
+          @$APP.route($PATH, ...)
           def $FUNC(...):
               ...
       - pattern-not: |
-          @$APP.route("=~/(?i).*(admin|cms|editorial|manage).*/", ...)
+          @$APP.route($PATH, ...)
           @mfa_required
           def $FUNC(...):
               ...
+      - metavariable-regex:
+          metavariable: $PATH
+          regex: (?i).*(admin|cms|editorial|manage).*
     metadata:
       category: security
       subcategory:
@@ -232,18 +244,21 @@ rules:
     patterns:
       - pattern-either:
           - pattern: |
-              $APP.$VERB("=~/(?i).*(admin|cms|editorial|manage).*/", ($REQ, $RES) => {
+              $APP.$VERB($PATH, ($REQ, $RES) => {
                   ...
               })
           - pattern: |
-              $APP.$VERB("=~/(?i).*(admin|cms|editorial|manage).*/", function($REQ, $RES) {
+              $APP.$VERB($PATH, function($REQ, $RES) {
                   ...
               })
           - pattern: |
-              $APP.$VERB("=~/(?i).*(admin|cms|editorial|manage).*/", async ($REQ, $RES) => {
+              $APP.$VERB($PATH, async ($REQ, $RES) => {
                   ...
               })
-      - pattern-not: $APP.$VERB("=~/(?i).*(admin|cms|editorial|manage).*/", $MFA, ...)
+      - pattern-not: $APP.$VERB($PATH, $MFA, ...)
+      - metavariable-regex:
+          metavariable: $PATH
+          regex: (?i).*(admin|cms|editorial|manage).*
     metadata:
       category: security
       subcategory:

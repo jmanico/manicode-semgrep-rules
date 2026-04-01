@@ -16,9 +16,12 @@ rules:
           - pattern: logger.$METHOD(...)
           - pattern: print(...)
       - pattern-inside: |
-          @$APP.route("=~/(?i).*(securedrop|tip|whistleblower|confidential).*/")
+          @$APP.route($PATH)
           def $FUNC(...):
               ...
+      - metavariable-regex:
+          metavariable: $PATH
+          regex: (?i).*(securedrop|tip|whistleblower|confidential).*
     metadata:
       category: security
       subcategory:
@@ -44,17 +47,20 @@ rules:
           - pattern: log.$METHOD(...)
       - pattern-either:
           - pattern-inside: |
-              $APP.$VERB("=~/(?i).*(securedrop|tip|whistleblower|confidential).*/", function $FUNC(...) {
+              $APP.$VERB($PATH, function $FUNC(...) {
                   ...
               })
           - pattern-inside: |
-              $APP.$VERB("=~/(?i).*(securedrop|tip|whistleblower|confidential).*/", ($REQ, $RES) => {
+              $APP.$VERB($PATH, ($REQ, $RES) => {
                   ...
               })
           - pattern-inside: |
-              $APP.$VERB("=~/(?i).*(securedrop|tip|whistleblower|confidential).*/", async ($REQ, $RES) => {
+              $APP.$VERB($PATH, async ($REQ, $RES) => {
                   ...
               })
+      - metavariable-regex:
+          metavariable: $PATH
+          regex: (?i).*(securedrop|tip|whistleblower|confidential).*
     metadata:
       category: security
       subcategory:

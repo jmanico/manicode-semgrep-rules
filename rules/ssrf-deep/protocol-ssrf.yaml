@@ -11,10 +11,13 @@ rules:
     languages: [python]
     patterns:
       - pattern-either:
-          - pattern: requests.$METHOD("=~/^(file|gopher|dict):\/\/.*/", ...)
-          - pattern: httpx.$METHOD("=~/^(file|gopher|dict):\/\/.*/", ...)
-          - pattern: urllib.request.urlopen("=~/^(file|gopher|dict):\/\/.*/", ...)
-          - pattern: urllib.request.Request("=~/^(file|gopher|dict):\/\/.*/", ...)
+          - pattern: requests.$METHOD($URL, ...)
+          - pattern: httpx.$METHOD($URL, ...)
+          - pattern: urllib.request.urlopen($URL, ...)
+          - pattern: urllib.request.Request($URL, ...)
+      - metavariable-regex:
+          metavariable: $URL
+          regex: (?i)^(file|gopher|dict)://.*
     metadata:
       category: security
       technology: [python]
@@ -35,19 +38,22 @@ rules:
       - pattern-either:
           - patterns:
               - pattern: |
-                  $URL = "=~/^(file|gopher|dict):\/\/.*/"
+                  $URL = $VALUE
                   ...
                   requests.$METHOD($URL, ...)
           - patterns:
               - pattern: |
-                  $URL = "=~/^(file|gopher|dict):\/\/.*/"
+                  $URL = $VALUE
                   ...
                   httpx.$METHOD($URL, ...)
           - patterns:
               - pattern: |
-                  $URL = "=~/^(file|gopher|dict):\/\/.*/"
+                  $URL = $VALUE
                   ...
                   urllib.request.urlopen($URL, ...)
+      - metavariable-regex:
+          metavariable: $VALUE
+          regex: (?i)^(file|gopher|dict)://.*
     metadata:
       category: security
       technology: [python]
@@ -99,14 +105,17 @@ rules:
     languages: [javascript, typescript]
     patterns:
       - pattern-either:
-          - pattern: fetch("=~/^(file|gopher|dict):\/\/.*/", ...)
-          - pattern: axios.get("=~/^(file|gopher|dict):\/\/.*/", ...)
-          - pattern: axios.post("=~/^(file|gopher|dict):\/\/.*/", ...)
-          - pattern: axios("=~/^(file|gopher|dict):\/\/.*/", ...)
-          - pattern: http.get("=~/^(file|gopher|dict):\/\/.*/", ...)
-          - pattern: http.request("=~/^(file|gopher|dict):\/\/.*/", ...)
-          - pattern: https.get("=~/^(file|gopher|dict):\/\/.*/", ...)
-          - pattern: https.request("=~/^(file|gopher|dict):\/\/.*/", ...)
+          - pattern: fetch($URL, ...)
+          - pattern: axios.get($URL, ...)
+          - pattern: axios.post($URL, ...)
+          - pattern: axios($URL, ...)
+          - pattern: http.get($URL, ...)
+          - pattern: http.request($URL, ...)
+          - pattern: https.get($URL, ...)
+          - pattern: https.request($URL, ...)
+      - metavariable-regex:
+          metavariable: $URL
+          regex: (?i)^(file|gopher|dict)://.*
     metadata:
       category: security
       technology: [javascript, typescript]
@@ -127,19 +136,22 @@ rules:
       - pattern-either:
           - patterns:
               - pattern: |
-                  $URL = "=~/^(file|gopher|dict):\/\/.*/";
+                  $URL = $VALUE;
                   ...
                   fetch($URL, ...);
           - patterns:
               - pattern: |
-                  $URL = "=~/^(file|gopher|dict):\/\/.*/";
+                  $URL = $VALUE;
                   ...
                   axios.get($URL, ...);
           - patterns:
               - pattern: |
-                  $URL = "=~/^(file|gopher|dict):\/\/.*/";
+                  $URL = $VALUE;
                   ...
                   axios($URL, ...);
+      - metavariable-regex:
+          metavariable: $VALUE
+          regex: (?i)^(file|gopher|dict)://.*
     metadata:
       category: security
       technology: [javascript, typescript]
@@ -158,12 +170,15 @@ rules:
     languages: [java]
     patterns:
       - pattern-either:
-          - pattern: new URL("=~/^(file|gopher|dict):\/\/.*/").openConnection(...)
-          - pattern: new java.net.URL("=~/^(file|gopher|dict):\/\/.*/").openConnection(...)
-          - pattern: URI.create("=~/^(file|gopher|dict):\/\/.*/")
-          - pattern: java.net.URI.create("=~/^(file|gopher|dict):\/\/.*/")
-          - pattern: new URL("=~/^(file|gopher|dict):\/\/.*/").openStream(...)
-          - pattern: new java.net.URL("=~/^(file|gopher|dict):\/\/.*/").openStream(...)
+          - pattern: new URL($URL).openConnection(...)
+          - pattern: new java.net.URL($URL).openConnection(...)
+          - pattern: URI.create($URL)
+          - pattern: java.net.URI.create($URL)
+          - pattern: new URL($URL).openStream(...)
+          - pattern: new java.net.URL($URL).openStream(...)
+      - metavariable-regex:
+          metavariable: $URL
+          regex: (?i)^(file|gopher|dict)://.*
     metadata:
       category: security
       technology: [java]

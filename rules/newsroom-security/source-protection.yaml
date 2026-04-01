@@ -83,13 +83,14 @@ rules:
       exposed through an API.
     severity: WARNING
     languages: [python]
-    pattern-either:
-      - pattern: $CURSOR.execute("=~/(?i).*(source|tipster).*JOIN.*(article|story|content|stories|articles).*/", ...)
-      - pattern: $CURSOR.execute("=~/(?i).*(article|story|content|stories|articles).*JOIN.*(source|tipster).*/", ...)
-      - pattern: $DB.query("=~/(?i).*(source|tipster).*JOIN.*(article|story|content|stories|articles).*/", ...)
-      - pattern: $DB.query("=~/(?i).*(article|story|content|stories|articles).*JOIN.*(source|tipster).*/", ...)
-      - pattern: $DB.raw("=~/(?i).*(source|tipster).*JOIN.*(article|story|content|stories|articles).*/", ...)
-      - pattern: $DB.raw("=~/(?i).*(article|story|content|stories|articles).*JOIN.*(source|tipster).*/", ...)
+    patterns:
+      - pattern-either:
+          - pattern: $CURSOR.execute($QUERY, ...)
+          - pattern: $DB.query($QUERY, ...)
+          - pattern: $DB.raw($QUERY, ...)
+      - metavariable-regex:
+          metavariable: $QUERY
+          regex: (?is).*((source|tipster).*(join).*(article|story|content|stories|articles)|(article|story|content|stories|articles).*(join).*(source|tipster)).*
     metadata:
       category: security
       subcategory:
@@ -108,13 +109,14 @@ rules:
       exposed through an API.
     severity: WARNING
     languages: [javascript, typescript]
-    pattern-either:
-      - pattern: $DB.query("=~/(?i).*(source|tipster).*JOIN.*(article|story|content|stories|articles).*/", ...)
-      - pattern: $DB.query("=~/(?i).*(article|story|content|stories|articles).*JOIN.*(source|tipster).*/", ...)
-      - pattern: $DB.raw("=~/(?i).*(source|tipster).*JOIN.*(article|story|content|stories|articles).*/", ...)
-      - pattern: $DB.raw("=~/(?i).*(article|story|content|stories|articles).*JOIN.*(source|tipster).*/", ...)
-      - pattern: $POOL.query("=~/(?i).*(source|tipster).*JOIN.*(article|story|content|stories|articles).*/", ...)
-      - pattern: $POOL.query("=~/(?i).*(article|story|content|stories|articles).*JOIN.*(source|tipster).*/", ...)
+    patterns:
+      - pattern-either:
+          - pattern: $DB.query($QUERY, ...)
+          - pattern: $DB.raw($QUERY, ...)
+          - pattern: $POOL.query($QUERY, ...)
+      - metavariable-regex:
+          metavariable: $QUERY
+          regex: (?is).*((source|tipster).*(join).*(article|story|content|stories|articles)|(article|story|content|stories|articles).*(join).*(source|tipster)).*
     metadata:
       category: security
       subcategory:
@@ -143,9 +145,12 @@ rules:
           - pattern: mixpanel.track(...)
           - pattern: mixpanel.people.set(...)
       - pattern-inside: |
-          @$APP.route("=~/(?i).*(tip|securedrop|whistleblower|submit_tip).*/")
+          @$APP.route($PATH)
           def $FUNC(...):
               ...
+      - metavariable-regex:
+          metavariable: $PATH
+          regex: (?i).*(tip|securedrop|whistleblower|submit_tip).*
     metadata:
       category: security
       subcategory:
@@ -173,9 +178,12 @@ rules:
           - pattern: mixpanel.track(...)
           - pattern: mixpanel.people.set(...)
       - pattern-inside: |
-          $APP.$METHOD("=~/(?i).*(tip|securedrop|whistleblower|submit_tip).*/", function $FUNC(...) {
+          $APP.$METHOD($PATH, function $FUNC(...) {
               ...
           })
+      - metavariable-regex:
+          metavariable: $PATH
+          regex: (?i).*(tip|securedrop|whistleblower|submit_tip).*
     metadata:
       category: security
       subcategory:
@@ -201,9 +209,12 @@ rules:
           - pattern: mixpanel.track(...)
           - pattern: mixpanel.people.set(...)
       - pattern-inside: |
-          $APP.$METHOD("=~/(?i).*(tip|securedrop|whistleblower|submit_tip).*/", ($REQ, $RES) => {
+          $APP.$METHOD($PATH, ($REQ, $RES) => {
               ...
           })
+      - metavariable-regex:
+          metavariable: $PATH
+          regex: (?i).*(tip|securedrop|whistleblower|submit_tip).*
     metadata:
       category: security
       subcategory:
