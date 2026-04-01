@@ -1,0 +1,213 @@
+rules:
+  # ---------------------------------------------------------------------------
+  # Source-identity logging — Python
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.source-identity-logged-python
+    message: >-
+      Source-identifying information is being written to logs.  Logging
+      variables such as source, tipster, whistleblower, informant, or
+      source-contact fields can expose confidential sources if logs are
+      compromised, subpoenaed, or leaked.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: logging.$METHOD(..., $SOURCE, ...)
+          - pattern: logging.$METHOD(... + $SOURCE + ...)
+          - pattern: logging.$METHOD(f"...{$SOURCE}...")
+          - pattern: logging.$METHOD("..." % $SOURCE)
+          - pattern: logging.$METHOD("...".format(..., $SOURCE, ...))
+          - pattern: logger.$METHOD(..., $SOURCE, ...)
+          - pattern: logger.$METHOD(... + $SOURCE + ...)
+          - pattern: logger.$METHOD(f"...{$SOURCE}...")
+          - pattern: logger.$METHOD("..." % $SOURCE)
+          - pattern: logger.$METHOD("...".format(..., $SOURCE, ...))
+          - pattern: print(..., $SOURCE, ...)
+          - pattern: print(... + $SOURCE + ...)
+          - pattern: print(f"...{$SOURCE}...")
+      - metavariable-regex:
+          metavariable: $SOURCE
+          regex: (?i).*(source|tipster|whistleblower|informant|source_ip|source_phone|source_email|source_name).*
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - python
+      references:
+        - https://freedom.press/training/protecting-sources/
+
+  # ---------------------------------------------------------------------------
+  # Source-identity logging — JavaScript / TypeScript
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.source-identity-logged-js
+    message: >-
+      Source-identifying information is being written to logs.  Logging
+      variables such as source, tipster, whistleblower, informant, or
+      source-contact fields can expose confidential sources if logs are
+      compromised, subpoenaed, or leaked.
+    severity: ERROR
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: console.$METHOD(..., $SOURCE, ...)
+          - pattern: console.$METHOD(... + $SOURCE + ...)
+          - pattern: console.$METHOD(`...${$SOURCE}...`)
+          - pattern: logger.$METHOD(..., $SOURCE, ...)
+          - pattern: logger.$METHOD(... + $SOURCE + ...)
+          - pattern: logger.$METHOD(`...${$SOURCE}...`)
+          - pattern: log.$METHOD(..., $SOURCE, ...)
+          - pattern: log.$METHOD(... + $SOURCE + ...)
+          - pattern: log.$METHOD(`...${$SOURCE}...`)
+      - metavariable-regex:
+          metavariable: $SOURCE
+          regex: (?i).*(source|tipster|whistleblower|informant|source_ip|source_phone|source_email|source_name).*
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - javascript
+        - typescript
+      references:
+        - https://freedom.press/training/protecting-sources/
+
+  # ---------------------------------------------------------------------------
+  # Database join leaking source identity — Python
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.source-article-table-join-python
+    message: >-
+      A database query joins or selects from both source/tipster tables and
+      article/story/content tables.  This correlation can de-anonymize
+      confidential sources if the query results are cached, logged, or
+      exposed through an API.
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - pattern: $CURSOR.execute("=~/(?i).*(source|tipster).*JOIN.*(article|story|content|stories|articles).*/", ...)
+      - pattern: $CURSOR.execute("=~/(?i).*(article|story|content|stories|articles).*JOIN.*(source|tipster).*/", ...)
+      - pattern: $DB.query("=~/(?i).*(source|tipster).*JOIN.*(article|story|content|stories|articles).*/", ...)
+      - pattern: $DB.query("=~/(?i).*(article|story|content|stories|articles).*JOIN.*(source|tipster).*/", ...)
+      - pattern: $DB.raw("=~/(?i).*(source|tipster).*JOIN.*(article|story|content|stories|articles).*/", ...)
+      - pattern: $DB.raw("=~/(?i).*(article|story|content|stories|articles).*JOIN.*(source|tipster).*/", ...)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - python
+
+  # ---------------------------------------------------------------------------
+  # Database join leaking source identity — JavaScript
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.source-article-table-join-js
+    message: >-
+      A database query joins or selects from both source/tipster tables and
+      article/story/content tables.  This correlation can de-anonymize
+      confidential sources if the query results are cached, logged, or
+      exposed through an API.
+    severity: WARNING
+    languages: [javascript, typescript]
+    pattern-either:
+      - pattern: $DB.query("=~/(?i).*(source|tipster).*JOIN.*(article|story|content|stories|articles).*/", ...)
+      - pattern: $DB.query("=~/(?i).*(article|story|content|stories|articles).*JOIN.*(source|tipster).*/", ...)
+      - pattern: $DB.raw("=~/(?i).*(source|tipster).*JOIN.*(article|story|content|stories|articles).*/", ...)
+      - pattern: $DB.raw("=~/(?i).*(article|story|content|stories|articles).*JOIN.*(source|tipster).*/", ...)
+      - pattern: $POOL.query("=~/(?i).*(source|tipster).*JOIN.*(article|story|content|stories|articles).*/", ...)
+      - pattern: $POOL.query("=~/(?i).*(article|story|content|stories|articles).*JOIN.*(source|tipster).*/", ...)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - javascript
+        - typescript
+
+  # ---------------------------------------------------------------------------
+  # Analytics tracking in tip/securedrop handlers — Python
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.analytics-in-tip-handler-python
+    message: >-
+      Analytics or tracking code detected inside a tip-submission or
+      SecureDrop handler.  Third-party analytics services can leak source
+      IP addresses, browser fingerprints, and behavioral data to external
+      parties, undermining source confidentiality.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: analytics.track(...)
+          - pattern: analytics.identify(...)
+          - pattern: analytics.page(...)
+          - pattern: gtag(...)
+          - pattern: mixpanel.track(...)
+          - pattern: mixpanel.people.set(...)
+      - pattern-inside: |
+          @$APP.route("=~/(?i).*(tip|securedrop|whistleblower|submit_tip).*/")
+          def $FUNC(...):
+              ...
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - python
+
+  # ---------------------------------------------------------------------------
+  # Analytics tracking in tip/securedrop handlers — JavaScript
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.analytics-in-tip-handler-js
+    message: >-
+      Analytics or tracking code detected inside a tip-submission or
+      SecureDrop handler.  Third-party analytics services can leak source
+      IP addresses, browser fingerprints, and behavioral data to external
+      parties, undermining source confidentiality.
+    severity: ERROR
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: analytics.track(...)
+          - pattern: analytics.identify(...)
+          - pattern: analytics.page(...)
+          - pattern: gtag(...)
+          - pattern: mixpanel.track(...)
+          - pattern: mixpanel.people.set(...)
+      - pattern-inside: |
+          $APP.$METHOD("=~/(?i).*(tip|securedrop|whistleblower|submit_tip).*/", function $FUNC(...) {
+              ...
+          })
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - javascript
+        - typescript
+
+  - id: manicode.newsroom.analytics-in-tip-handler-js-arrow
+    message: >-
+      Analytics or tracking code detected inside a tip-submission or
+      SecureDrop handler.  Third-party analytics services can leak source
+      IP addresses, browser fingerprints, and behavioral data to external
+      parties, undermining source confidentiality.
+    severity: ERROR
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: analytics.track(...)
+          - pattern: analytics.identify(...)
+          - pattern: analytics.page(...)
+          - pattern: gtag(...)
+          - pattern: mixpanel.track(...)
+          - pattern: mixpanel.people.set(...)
+      - pattern-inside: |
+          $APP.$METHOD("=~/(?i).*(tip|securedrop|whistleblower|submit_tip).*/", ($REQ, $RES) => {
+              ...
+          })
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - javascript
+        - typescript

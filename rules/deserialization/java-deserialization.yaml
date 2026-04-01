@@ -1,0 +1,144 @@
+rules:
+  - id: manicode.deserialization.java-objectinputstream-readobject
+    message: >-
+      ObjectInputStream.readObject() deserializes arbitrary Java objects and
+      is a well-known remote code execution vector when processing untrusted
+      data. Use an ObjectInputFilter to restrict allowed classes, or switch
+      to a safe serialization format such as JSON.
+    severity: ERROR
+    languages:
+      - java
+    patterns:
+      - pattern: (ObjectInputStream $OIS).readObject()
+      - pattern-not-inside: |
+          $OIS.setObjectInputFilter(...);
+          ...
+          $OIS.readObject();
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: HIGH
+
+  - id: manicode.deserialization.java-xmldecoder
+    message: >-
+      XMLDecoder deserializes arbitrary Java objects from XML and can
+      execute arbitrary code including Runtime.exec(). Never use XMLDecoder
+      on untrusted input. Use a safe XML parser or JSON instead.
+    severity: ERROR
+    languages:
+      - java
+    pattern: new XMLDecoder($X)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: HIGH
+
+  - id: manicode.deserialization.java-xstream-fromxml
+    message: >-
+      XStream.fromXML() can deserialize arbitrary objects and execute code
+      unless the security framework is configured. Call
+      XStream.setupDefaultSecurity() and explicitly allow only required
+      types with allowTypes() before deserializing.
+    severity: ERROR
+    languages:
+      - java
+    patterns:
+      - pattern: (XStream $XS).fromXML($X)
+      - pattern-not-inside: |
+          $XS.setupDefaultSecurity(...);
+          ...
+          $XS.fromXML($X);
+      - pattern-not-inside: |
+          $XS.allowTypes(...);
+          ...
+          $XS.fromXML($X);
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: HIGH
+
+  - id: manicode.deserialization.java-snakeyaml-unsafe-load
+    message: >-
+      SnakeYAML's Yaml.load() with the default constructor can instantiate
+      arbitrary Java objects, leading to remote code execution. Use
+      new Yaml(new SafeConstructor()) to restrict deserialization to safe
+      types only.
+    severity: ERROR
+    languages:
+      - java
+    patterns:
+      - pattern: new Yaml().load($X)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: HIGH
+
+  - id: manicode.deserialization.java-snakeyaml-unsafe-constructor
+    message: >-
+      SnakeYAML Yaml instance created without SafeConstructor can
+      instantiate arbitrary Java objects when load() is called, leading to
+      remote code execution. Pass new SafeConstructor() to the Yaml
+      constructor.
+    severity: ERROR
+    languages:
+      - java
+    patterns:
+      - pattern: |
+          $YAML = new Yaml();
+          ...
+          $YAML.load($X);
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: HIGH
+
+  - id: manicode.deserialization.java-jackson-enable-default-typing
+    message: >-
+      ObjectMapper.enableDefaultTyping() allows polymorphic deserialization
+      of arbitrary types, enabling remote code execution via gadget chains.
+      Use activateDefaultTyping() with a PolymorphicTypeValidator that
+      restricts allowed base types, or avoid default typing entirely.
+    severity: ERROR
+    languages:
+      - java
+    pattern: $MAPPER.enableDefaultTyping(...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: HIGH
+
+  - id: manicode.deserialization.java-jackson-jsontypeinfo-class
+    message: >-
+      @JsonTypeInfo with use = Id.CLASS or use = Id.MINIMAL_CLASS enables
+      polymorphic deserialization that can instantiate arbitrary classes.
+      This is a remote code execution vector via Jackson gadget chains.
+      Use Id.NAME with explicit @JsonSubTypes instead.
+    severity: ERROR
+    languages:
+      - java
+    pattern: "@JsonTypeInfo(use = Id.CLASS, ...)"
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: HIGH

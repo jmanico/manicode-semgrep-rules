@@ -1,0 +1,255 @@
+rules:
+  # ---------------------------------------------------------------------------
+  # Draft/unpublished content endpoint without auth — Python (Flask)
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.draft-endpoint-no-auth-flask
+    message: >-
+      An API endpoint serving draft or unpublished content does not have an
+      authentication decorator such as @login_required.  Unauthenticated
+      access to unpublished stories can leak embargoed information, ongoing
+      investigations, or source-identifying details.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern: |
+          @$APP.route("=~/(?i).*(draft|unpublished|preview|embargo).*/", ...)
+          def $FUNC(...):
+              ...
+      - pattern-not: |
+          @login_required
+          @$APP.route("=~/(?i).*(draft|unpublished|preview|embargo).*/", ...)
+          def $FUNC(...):
+              ...
+      - pattern-not: |
+          @$APP.route("=~/(?i).*(draft|unpublished|preview|embargo).*/", ...)
+          @login_required
+          def $FUNC(...):
+              ...
+      - pattern-not: |
+          @requires_auth
+          @$APP.route("=~/(?i).*(draft|unpublished|preview|embargo).*/", ...)
+          def $FUNC(...):
+              ...
+      - pattern-not: |
+          @$APP.route("=~/(?i).*(draft|unpublished|preview|embargo).*/", ...)
+          @requires_auth
+          def $FUNC(...):
+              ...
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - python
+      cwe:
+        - "CWE-306: Missing Authentication for Critical Function"
+
+  # ---------------------------------------------------------------------------
+  # Draft/unpublished content endpoint without auth — Python (Django)
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.draft-endpoint-no-auth-django
+    message: >-
+      A Django view serving draft or unpublished content does not use the
+      @login_required decorator.  Unauthenticated access to unpublished
+      stories can leak embargoed information or source-identifying details.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern: |
+          def $FUNC($REQUEST, ...):
+              ...
+              $MODEL.objects.filter(..., status="=~/(?i)(draft|unpublished)/", ...)
+              ...
+      - pattern-not: |
+          @login_required
+          def $FUNC($REQUEST, ...):
+              ...
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - python
+      cwe:
+        - "CWE-306: Missing Authentication for Critical Function"
+
+  # ---------------------------------------------------------------------------
+  # Draft content endpoint without auth middleware — JavaScript (Express)
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.draft-endpoint-no-auth-express
+    message: >-
+      An Express route serving draft or unpublished content does not include
+      authentication middleware.  Unauthenticated access to unpublished
+      stories can leak embargoed information, ongoing investigations, or
+      source-identifying details.
+    severity: ERROR
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $APP.get("=~/(?i).*(draft|unpublished|preview|embargo).*/", ($REQ, $RES) => {
+                  ...
+              })
+          - pattern: |
+              $APP.get("=~/(?i).*(draft|unpublished|preview|embargo).*/", function($REQ, $RES) {
+                  ...
+              })
+          - pattern: |
+              $APP.get("=~/(?i).*(draft|unpublished|preview|embargo).*/", async ($REQ, $RES) => {
+                  ...
+              })
+      - pattern-not: |
+          $APP.get("=~/(?i).*(draft|unpublished|preview|embargo).*/", $AUTH, ...)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - javascript
+        - typescript
+      cwe:
+        - "CWE-306: Missing Authentication for Critical Function"
+
+  # ---------------------------------------------------------------------------
+  # API response leaking embargo/schedule dates — Python
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.embargo-date-in-response-python
+    message: >-
+      An API response includes embargo_date, publish_date, or
+      scheduled_date fields.  Exposing scheduling metadata can reveal
+      when a sensitive story will drop, giving adversaries time to prepare
+      counter-narratives, destroy evidence, or retaliate against sources.
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - pattern: |
+          {..., "embargo_date": $VAL, ...}
+      - pattern: |
+          {..., "publish_date": $VAL, ...}
+      - pattern: |
+          {..., "scheduled_date": $VAL, ...}
+      - pattern: |
+          {..., "embargo": $VAL, ...}
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - python
+
+  # ---------------------------------------------------------------------------
+  # API response leaking embargo/schedule dates — JavaScript
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.embargo-date-in-response-js
+    message: >-
+      An API response includes embargo_date, publish_date, or
+      scheduled_date fields.  Exposing scheduling metadata can reveal
+      when a sensitive story will drop, giving adversaries time to prepare
+      counter-narratives, destroy evidence, or retaliate against sources.
+    severity: WARNING
+    languages: [javascript, typescript]
+    pattern-either:
+      - pattern: |
+          {..., embargo_date: $VAL, ...}
+      - pattern: |
+          {..., publish_date: $VAL, ...}
+      - pattern: |
+          {..., scheduled_date: $VAL, ...}
+      - pattern: |
+          {..., embargo: $VAL, ...}
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - javascript
+        - typescript
+
+  # ---------------------------------------------------------------------------
+  # CMS/admin route without MFA check — Python
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.admin-route-no-mfa-python
+    message: >-
+      A CMS or admin route handler does not include an MFA/2FA verification
+      check.  Admin panels control content publication, user management,
+      and source data.  Without MFA, a compromised password grants full
+      access to the editorial system.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern: |
+          @$APP.route("=~/(?i).*(admin|cms|editorial|manage).*/", ...)
+          def $FUNC(...):
+              ...
+      - pattern-not: |
+          @$APP.route("=~/(?i).*(admin|cms|editorial|manage).*/", ...)
+          def $FUNC(...):
+              ...
+              verify_mfa(...)
+              ...
+      - pattern-not: |
+          @$APP.route("=~/(?i).*(admin|cms|editorial|manage).*/", ...)
+          def $FUNC(...):
+              ...
+              check_2fa(...)
+              ...
+      - pattern-not: |
+          @$APP.route("=~/(?i).*(admin|cms|editorial|manage).*/", ...)
+          def $FUNC(...):
+              ...
+              verify_totp(...)
+              ...
+      - pattern-not: |
+          @mfa_required
+          @$APP.route("=~/(?i).*(admin|cms|editorial|manage).*/", ...)
+          def $FUNC(...):
+              ...
+      - pattern-not: |
+          @$APP.route("=~/(?i).*(admin|cms|editorial|manage).*/", ...)
+          @mfa_required
+          def $FUNC(...):
+              ...
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - python
+      cwe:
+        - "CWE-308: Use of Single-factor Authentication"
+
+  # ---------------------------------------------------------------------------
+  # CMS/admin route without MFA check — JavaScript
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.admin-route-no-mfa-js
+    message: >-
+      A CMS or admin route handler does not include MFA/2FA verification
+      middleware.  Admin panels control content publication, user
+      management, and source data.  Without MFA, a compromised password
+      grants full access to the editorial system.
+    severity: WARNING
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $APP.$VERB("=~/(?i).*(admin|cms|editorial|manage).*/", ($REQ, $RES) => {
+                  ...
+              })
+          - pattern: |
+              $APP.$VERB("=~/(?i).*(admin|cms|editorial|manage).*/", function($REQ, $RES) {
+                  ...
+              })
+          - pattern: |
+              $APP.$VERB("=~/(?i).*(admin|cms|editorial|manage).*/", async ($REQ, $RES) => {
+                  ...
+              })
+      - pattern-not: $APP.$VERB("=~/(?i).*(admin|cms|editorial|manage).*/", $MFA, ...)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - javascript
+        - typescript
+      cwe:
+        - "CWE-308: Use of Single-factor Authentication"

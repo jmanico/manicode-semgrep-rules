@@ -1,0 +1,129 @@
+rules:
+  # ---------------------------------------------------------------
+  # Detect pip install without explicit --index-url
+  # ---------------------------------------------------------------
+  - id: manicode.supply-chain.pip-install-missing-index-url
+    message: >
+      pip install invoked without --index-url or --extra-index-url.
+      When installing internal packages, always pin the registry with
+      --index-url to prevent dependency-confusion attacks where an
+      attacker publishes a higher-version package on PyPI.
+    severity: WARNING
+    languages:
+      - generic
+    patterns:
+      - pattern: pip install ...
+      - pattern-not: pip install ... --index-url ...
+      - pattern-not: pip install ... --extra-index-url ...
+      - pattern-not: pip install ... -i ...
+
+  # ---------------------------------------------------------------
+  # Detect pip install -r without explicit --index-url
+  # ---------------------------------------------------------------
+  - id: manicode.supply-chain.pip-install-requirements-missing-index-url
+    message: >
+      pip install -r invoked without --index-url. When using a
+      requirements file that may reference internal packages, always
+      specify --index-url to prevent dependency-confusion attacks.
+    severity: WARNING
+    languages:
+      - generic
+    patterns:
+      - pattern: pip install -r ...
+      - pattern-not: pip install -r ... --index-url ...
+      - pattern-not: pip install -r ... --extra-index-url ...
+      - pattern-not: pip install -r ... -i ...
+
+  # ---------------------------------------------------------------
+  # Detect setup.py dependency_links pointing to public URLs
+  # ---------------------------------------------------------------
+  - id: manicode.supply-chain.setup-py-dependency-links-public-url
+    message: >
+      setup() uses dependency_links pointing to an external URL.
+      dependency_links are deprecated and can be exploited for
+      dependency-confusion attacks. Use a private index server with
+      --index-url instead.
+    severity: ERROR
+    languages:
+      - python
+    patterns:
+      - pattern: |
+          setup(
+              ...,
+              dependency_links=[$URL, ...],
+              ...
+          )
+      - metavariable-pattern:
+          metavariable: $URL
+          patterns:
+            - pattern: '"http://..."'
+          language: generic
+    fix: |
+      # Remove dependency_links and use --index-url with pip instead.
+
+  - id: manicode.supply-chain.setup-py-dependency-links-https
+    message: >
+      setup() uses dependency_links pointing to an external HTTPS URL.
+      dependency_links are deprecated and can be exploited for
+      dependency-confusion attacks. Use a private index server with
+      --index-url instead.
+    severity: ERROR
+    languages:
+      - python
+    patterns:
+      - pattern: |
+          setup(
+              ...,
+              dependency_links=[$URL, ...],
+              ...
+          )
+      - metavariable-pattern:
+          metavariable: $URL
+          patterns:
+            - pattern: '"https://..."'
+          language: generic
+
+  # ---------------------------------------------------------------
+  # Detect pyproject.toml / setup.cfg with find-links to public URLs
+  # ---------------------------------------------------------------
+  - id: manicode.supply-chain.find-links-public-url
+    message: >
+      Configuration contains find-links or dependency_links referencing
+      a public URL. This can enable dependency-confusion attacks where
+      an attacker hosts a malicious package at the referenced URL.
+      Use a private package index with --index-url instead.
+    severity: WARNING
+    languages:
+      - generic
+    pattern: |
+      dependency_links = http://$URL
+
+  - id: manicode.supply-chain.find-links-public-url-https
+    message: >
+      Configuration contains find-links or dependency_links referencing
+      a public HTTPS URL. This can enable dependency-confusion attacks
+      where an attacker hosts a malicious package at the referenced URL.
+      Use a private package index with --index-url instead.
+    severity: WARNING
+    languages:
+      - generic
+    pattern: |
+      dependency_links = https://$URL
+
+  # ---------------------------------------------------------------
+  # Detect .npmrc with mixed registry configurations
+  # ---------------------------------------------------------------
+  - id: manicode.supply-chain.npmrc-mixed-registry
+    message: >
+      .npmrc contains a scoped registry alongside the default registry.
+      Mixed registry configurations can be exploited for dependency-
+      confusion attacks. Ensure all packages resolve from your private
+      registry, or use scoped packages exclusively.
+    severity: WARNING
+    languages:
+      - generic
+    patterns:
+      - pattern: |
+          registry=$DEFAULT_REGISTRY
+      - pattern: |
+          @$SCOPE:registry=$SCOPED_REGISTRY

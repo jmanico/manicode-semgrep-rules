@@ -1,0 +1,184 @@
+rules:
+  # ===============================================================
+  # Python — setattr with iteration over user-controlled dict
+  # ===============================================================
+  - id: manicode.object-injection.python-setattr-loop
+    languages: [python]
+    severity: WARNING
+    message: >-
+      setattr() is called inside a loop that iterates over a
+      user-controlled dictionary. An attacker can inject keys that
+      overwrite internal attributes, methods, or security-critical
+      fields on the target object. Validate keys against an explicit
+      allowlist before calling setattr().
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+      confidence: MEDIUM
+      references:
+        - https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/
+    pattern-either:
+      - pattern: |
+          for $KEY, $VALUE in $DATA.items():
+              ...
+              setattr($OBJ, $KEY, $VALUE)
+              ...
+      - pattern: |
+          for $KEY in $DATA:
+              ...
+              setattr($OBJ, $KEY, $DATA[$KEY])
+              ...
+      - pattern: |
+          for $KEY, $VALUE in $DATA.items():
+              setattr($OBJ, $KEY, $VALUE)
+      - pattern: |
+          for $KEY in $DATA:
+              setattr($OBJ, $KEY, $DATA[$KEY])
+
+  # ===============================================================
+  # JavaScript — dynamic property assignment from user input
+  # ===============================================================
+  - id: manicode.object-injection.js-dynamic-property-assignment
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      A user-controlled key is used to assign a property on an object
+      (obj[key] = value). An attacker can set __proto__, constructor,
+      or other prototype properties to achieve prototype pollution,
+      or overwrite security-critical fields. Validate keys against an
+      allowlist and reject __proto__, constructor, and prototype.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+        - "CWE-1321: Improperly Controlled Modification of Object Prototype Attributes ('Prototype Pollution')"
+      confidence: MEDIUM
+      references:
+        - https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/
+    pattern-either:
+      - pattern: |
+          for (var $KEY in req.body) {
+              ...
+              $OBJ[$KEY] = ...;
+              ...
+          }
+      - pattern: |
+          for (let $KEY in req.body) {
+              ...
+              $OBJ[$KEY] = ...;
+              ...
+          }
+      - pattern: |
+          for (const $KEY in req.body) {
+              ...
+              $OBJ[$KEY] = ...;
+              ...
+          }
+      - pattern: |
+          Object.keys(req.body).forEach(($KEY) => {
+              ...
+              $OBJ[$KEY] = ...;
+              ...
+          })
+      - pattern: |
+          for (var $KEY of Object.keys(req.body)) {
+              ...
+              $OBJ[$KEY] = ...;
+              ...
+          }
+      - pattern: |
+          for (let $KEY of Object.keys(req.body)) {
+              ...
+              $OBJ[$KEY] = ...;
+              ...
+          }
+      - pattern: |
+          for (const $KEY of Object.keys(req.body)) {
+              ...
+              $OBJ[$KEY] = ...;
+              ...
+          }
+
+  # ===============================================================
+  # JavaScript — __proto__ pollution via merge/extend
+  # ===============================================================
+  - id: manicode.object-injection.js-proto-pollution-merge
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      A recursive merge, extend, or deep-copy function receives
+      user-controlled input (req.body). Without prototype pollution
+      guards, an attacker can inject a __proto__ key to modify
+      Object.prototype and affect all objects in the application.
+      Use Object.create(null) as the target, or validate/strip
+      __proto__ and constructor keys from input.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-1321: Improperly Controlled Modification of Object Prototype Attributes ('Prototype Pollution')"
+      confidence: MEDIUM
+      references:
+        - https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/
+    pattern-either:
+      - pattern: $LODASH.merge($OBJ, req.body)
+      - pattern: $LODASH.defaultsDeep($OBJ, req.body)
+      - pattern: $LODASH.extend($OBJ, req.body)
+      - pattern: merge($OBJ, req.body)
+      - pattern: deepMerge($OBJ, req.body)
+      - pattern: extend($OBJ, req.body)
+      - pattern: $.extend(true, $OBJ, req.body)
+      - pattern: jQuery.extend(true, $OBJ, req.body)
+
+  # ===============================================================
+  # Java — reflection Field.set() with user-controlled field name
+  # ===============================================================
+  - id: manicode.object-injection.java-reflection-field-set
+    languages: [java]
+    severity: WARNING
+    message: >-
+      Reflection is used to set a field whose name comes from
+      user-controlled input. An attacker can target any field on
+      the object, including private and security-sensitive ones.
+      Validate the field name against an explicit allowlist before
+      using reflection to set it.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+      confidence: MEDIUM
+      references:
+        - https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/
+    pattern-either:
+      - pattern: |
+          $FIELD = $CLASS.getDeclaredField($INPUT);
+          ...
+          $FIELD.set($OBJ, $VALUE);
+      - pattern: |
+          $FIELD = $CLASS.getField($INPUT);
+          ...
+          $FIELD.set($OBJ, $VALUE);
+      - pattern: |
+          $FIELD = $OBJ.getClass().getDeclaredField($INPUT);
+          ...
+          $FIELD.set($OBJ, $VALUE);
+      - pattern: |
+          $FIELD = $OBJ.getClass().getField($INPUT);
+          ...
+          $FIELD.set($OBJ, $VALUE);
+      - pattern: |
+          for (...) {
+              ...
+              $FIELD = $CLASS.getDeclaredField($KEY);
+              ...
+              $FIELD.set($OBJ, $VALUE);
+              ...
+          }

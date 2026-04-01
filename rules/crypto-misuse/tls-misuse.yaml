@@ -1,0 +1,132 @@
+rules:
+  # ----------------------------------------------------------------
+  # Python: TLS verification disabled
+  # ----------------------------------------------------------------
+  - id: manicode.crypto.tls-verify-disabled-python
+    message: >-
+      TLS certificate verification is disabled (verify=False). This
+      allows man-in-the-middle attacks. Remove verify=False or set
+      verify to a CA bundle path.
+    severity: ERROR
+    languages:
+      - python
+    pattern-either:
+      - pattern: requests.get(..., verify=False, ...)
+      - pattern: requests.post(..., verify=False, ...)
+      - pattern: requests.put(..., verify=False, ...)
+      - pattern: requests.patch(..., verify=False, ...)
+      - pattern: requests.delete(..., verify=False, ...)
+      - pattern: requests.head(..., verify=False, ...)
+      - pattern: requests.request(..., verify=False, ...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-295: Improper Certificate Validation"
+      confidence: HIGH
+
+  - id: manicode.crypto.tls-check-hostname-disabled-python
+    message: >-
+      SSL hostname checking is disabled (check_hostname=False). This
+      allows man-in-the-middle attacks. Keep check_hostname=True and
+      use proper certificate verification.
+    severity: ERROR
+    languages:
+      - python
+    pattern: $CTX.check_hostname = False
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-295: Improper Certificate Validation"
+      confidence: HIGH
+
+  # ----------------------------------------------------------------
+  # JavaScript / Node.js: TLS verification disabled
+  # ----------------------------------------------------------------
+  - id: manicode.crypto.tls-reject-unauthorized-false-javascript
+    message: >-
+      TLS certificate verification is disabled (rejectUnauthorized: false).
+      This allows man-in-the-middle attacks. Remove this option or set
+      it to true.
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    pattern: |
+      {rejectUnauthorized: false}
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-295: Improper Certificate Validation"
+      confidence: HIGH
+
+  - id: manicode.crypto.tls-reject-unauthorized-env-javascript
+    message: >-
+      TLS certificate verification is globally disabled via the
+      NODE_TLS_REJECT_UNAUTHORIZED environment variable. This affects
+      all HTTPS connections in the process and allows MITM attacks.
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    pattern: process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-295: Improper Certificate Validation"
+      confidence: HIGH
+
+  # ----------------------------------------------------------------
+  # Java: empty TrustManager
+  # ----------------------------------------------------------------
+  - id: manicode.crypto.tls-trust-all-java
+    message: >-
+      Custom TrustManager with empty checkServerTrusted implementation
+      detected. This disables TLS certificate verification and allows
+      man-in-the-middle attacks. Use the default TrustManager or
+      configure a proper trust store.
+    severity: ERROR
+    languages:
+      - java
+    pattern: |
+      new X509TrustManager() {
+        ...
+        public void checkServerTrusted(...) {
+        }
+        ...
+      }
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-295: Improper Certificate Validation"
+      confidence: HIGH
+
+  # ----------------------------------------------------------------
+  # Go: InsecureSkipVerify
+  # ----------------------------------------------------------------
+  - id: manicode.crypto.tls-insecure-skip-verify-go
+    message: >-
+      TLS certificate verification is disabled (InsecureSkipVerify: true).
+      This allows man-in-the-middle attacks. Remove InsecureSkipVerify
+      or set it to false.
+    severity: ERROR
+    languages:
+      - go
+    pattern: |
+      &tls.Config{..., InsecureSkipVerify: true, ...}
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-295: Improper Certificate Validation"
+      confidence: HIGH

@@ -1,0 +1,143 @@
+rules:
+  # ---------------------------------------------------------------
+  # Detect curl piped to shell in package.json install scripts
+  # ---------------------------------------------------------------
+  - id: manicode.supply-chain.postinstall-curl-pipe-sh
+    message: >
+      package.json install script pipes curl output to a shell.
+      This is a common supply-chain attack vector where malicious
+      packages download and execute arbitrary code during npm install.
+      Review the script carefully or replace with a vendored dependency.
+    severity: ERROR
+    languages:
+      - json
+    patterns:
+      - pattern-either:
+          - pattern: |
+              { "scripts": { "postinstall": "... curl ... | sh ..." } }
+          - pattern: |
+              { "scripts": { "postinstall": "... curl ... | bash ..." } }
+          - pattern: |
+              { "scripts": { "preinstall": "... curl ... | sh ..." } }
+          - pattern: |
+              { "scripts": { "preinstall": "... curl ... | bash ..." } }
+
+  # ---------------------------------------------------------------
+  # Detect wget piped to shell in package.json install scripts
+  # ---------------------------------------------------------------
+  - id: manicode.supply-chain.postinstall-wget-pipe-sh
+    message: >
+      package.json install script pipes wget output to a shell.
+      This is a common supply-chain attack vector where malicious
+      packages download and execute arbitrary code during npm install.
+      Review the script carefully or replace with a vendored dependency.
+    severity: ERROR
+    languages:
+      - json
+    patterns:
+      - pattern-either:
+          - pattern: |
+              { "scripts": { "postinstall": "... wget ... | sh ..." } }
+          - pattern: |
+              { "scripts": { "postinstall": "... wget ... | bash ..." } }
+          - pattern: |
+              { "scripts": { "preinstall": "... wget ... | sh ..." } }
+          - pattern: |
+              { "scripts": { "preinstall": "... wget ... | bash ..." } }
+
+  # ---------------------------------------------------------------
+  # Detect install scripts referencing external URLs
+  # ---------------------------------------------------------------
+  - id: manicode.supply-chain.postinstall-external-url
+    message: >
+      package.json install script references an external URL.
+      Install scripts that fetch remote resources can be exploited
+      for supply-chain attacks. Vendor dependencies locally or use
+      a checksum-verified download mechanism.
+    severity: WARNING
+    languages:
+      - json
+    patterns:
+      - pattern-either:
+          - pattern: |
+              { "scripts": { "postinstall": "... https://... ..." } }
+          - pattern: |
+              { "scripts": { "preinstall": "... https://... ..." } }
+          - pattern: |
+              { "scripts": { "postinstall": "... http://... ..." } }
+          - pattern: |
+              { "scripts": { "preinstall": "... http://... ..." } }
+          - pattern: |
+              { "scripts": { "install": "... https://... ..." } }
+          - pattern: |
+              { "scripts": { "install": "... http://... ..." } }
+
+  # ---------------------------------------------------------------
+  # Detect node -e or eval in install scripts (code execution)
+  # ---------------------------------------------------------------
+  - id: manicode.supply-chain.postinstall-node-eval
+    message: >
+      package.json install script uses node -e or eval to execute
+      inline code. This pattern is commonly used in supply-chain
+      attacks to obfuscate malicious payloads. Review the script
+      content carefully.
+    severity: WARNING
+    languages:
+      - json
+    patterns:
+      - pattern-either:
+          - pattern: |
+              { "scripts": { "postinstall": "... node -e ..." } }
+          - pattern: |
+              { "scripts": { "preinstall": "... node -e ..." } }
+          - pattern: |
+              { "scripts": { "install": "... node -e ..." } }
+
+  # ---------------------------------------------------------------
+  # Detect setup.py with os.system or subprocess calls
+  # downloading and executing remote code
+  # ---------------------------------------------------------------
+  - id: manicode.supply-chain.setup-py-install-remote-exec
+    message: >
+      setup.py executes a shell command that downloads remote code.
+      This is a supply-chain attack pattern where malicious packages
+      run arbitrary commands during pip install. Remove the remote
+      execution and vendor any required build dependencies.
+    severity: ERROR
+    languages:
+      - python
+    patterns:
+      - pattern-either:
+          - pattern: os.system("... curl ... | ...")
+          - pattern: os.system("... wget ... | ...")
+          - pattern: subprocess.call("... curl ... | ...", ...)
+          - pattern: subprocess.run("... curl ... | ...", ...)
+          - pattern: subprocess.Popen("... curl ... | ...", ...)
+          - pattern: os.popen("... curl ... | ...")
+          - pattern: os.popen("... wget ... | ...")
+
+  - id: manicode.supply-chain.setup-py-urlretrieve-exec
+    message: >
+      setup.py downloads a file with urllib and executes it.
+      This is a supply-chain attack pattern. Remove remote code
+      execution from the build process.
+    severity: ERROR
+    languages:
+      - python
+    pattern-either:
+      - pattern: |
+          urllib.request.urlretrieve($URL, $PATH)
+          ...
+          os.system($PATH)
+      - pattern: |
+          urllib.request.urlretrieve($URL, $PATH)
+          ...
+          subprocess.call($PATH, ...)
+      - pattern: |
+          urllib.request.urlretrieve($URL, $PATH)
+          ...
+          subprocess.run([$PATH, ...], ...)
+      - pattern: |
+          urllib.request.urlretrieve($URL, $PATH)
+          ...
+          exec(open($PATH).read())

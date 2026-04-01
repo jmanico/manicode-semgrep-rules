@@ -1,0 +1,236 @@
+rules:
+  # ---------------------------------------------------------------
+  # 1. Hardcoded API keys — Python
+  # ---------------------------------------------------------------
+  - id: manicode.llm-api-misuse.hardcoded-openai-key-python
+    languages: [python]
+    severity: ERROR
+    message: >-
+      OpenAI API key is hardcoded in source code. This exposes the key to
+      anyone with access to the codebase and version control history. Use
+      environment variables or a secrets manager instead.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-798: Use of Hard-coded Credentials"
+      confidence: HIGH
+      technology:
+        - openai
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    pattern-either:
+      - pattern: |
+          openai.api_key = "..."
+      - pattern: |
+          OpenAI(api_key="...")
+      - pattern: |
+          openai.OpenAI(api_key="...")
+      - pattern: |
+          AsyncOpenAI(api_key="...")
+      - pattern: |
+          $CLIENT = OpenAI(api_key="sk-...")
+
+  - id: manicode.llm-api-misuse.hardcoded-anthropic-key-python
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Anthropic API key is hardcoded in source code. This exposes the key to
+      anyone with access to the codebase. Use environment variables or a
+      secrets manager instead.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-798: Use of Hard-coded Credentials"
+      confidence: HIGH
+      technology:
+        - anthropic
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    pattern-either:
+      - pattern: |
+          Anthropic(api_key="...")
+      - pattern: |
+          anthropic.Anthropic(api_key="...")
+      - pattern: |
+          AsyncAnthropic(api_key="...")
+
+  - id: manicode.llm-api-misuse.hardcoded-cohere-key-python
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Cohere API key is hardcoded in source code. Use environment variables
+      or a secrets manager instead.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-798: Use of Hard-coded Credentials"
+      confidence: HIGH
+      technology:
+        - cohere
+    pattern-either:
+      - pattern: |
+          cohere.Client(api_key="...")
+      - pattern: |
+          cohere.Client("...")
+      - pattern: |
+          cohere.ClientV2(api_key="...")
+
+  # ---------------------------------------------------------------
+  # 2. Hardcoded API keys — JavaScript / TypeScript
+  # ---------------------------------------------------------------
+  - id: manicode.llm-api-misuse.hardcoded-openai-key-javascript
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      OpenAI API key is hardcoded in source code. This exposes the key to
+      anyone with access to the codebase. Use environment variables instead.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-798: Use of Hard-coded Credentials"
+      confidence: HIGH
+      technology:
+        - openai
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    pattern-either:
+      - pattern: |
+          new OpenAI({apiKey: "..."})
+      - pattern: |
+          new OpenAI({apiKey: "sk-..."})
+
+  - id: manicode.llm-api-misuse.hardcoded-anthropic-key-javascript
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Anthropic API key is hardcoded in source code. Use environment
+      variables instead.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-798: Use of Hard-coded Credentials"
+      confidence: HIGH
+      technology:
+        - anthropic
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    pattern-either:
+      - pattern: |
+          new Anthropic({apiKey: "..."})
+
+  # ---------------------------------------------------------------
+  # 3. Dangerous functions in LLM tool definitions — Python
+  # ---------------------------------------------------------------
+  - id: manicode.llm-api-misuse.dangerous-tool-function-python
+    languages: [python]
+    severity: ERROR
+    message: >-
+      An LLM tool/function definition maps to a dangerous function such as
+      eval(), exec(), os.system(), or subprocess. If the LLM invokes this
+      tool with attacker-influenced arguments, it enables remote code
+      execution. Tool functions should be narrowly scoped and never expose
+      raw code execution primitives.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+      confidence: MEDIUM
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    pattern-either:
+      - pattern: |
+          {"type": "function", "function": {..., "name": "eval", ...}}
+      - pattern: |
+          {"type": "function", "function": {..., "name": "exec", ...}}
+      - pattern: |
+          {"type": "function", "function": {..., "name": "os.system", ...}}
+      - pattern: |
+          {"type": "function", "function": {..., "name": "subprocess", ...}}
+
+  - id: manicode.llm-api-misuse.tool-calls-eval-python
+    languages: [python]
+    severity: ERROR
+    message: >-
+      LLM tool call arguments are passed directly to eval(), exec(),
+      os.system(), or subprocess. This enables remote code execution if the
+      LLM is manipulated through prompt injection. Validate and constrain
+      tool call arguments before execution.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code ('Eval Injection')"
+      confidence: HIGH
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    pattern-either:
+      - pattern: |
+          $ARGS = json.loads($TOOL_CALL.function.arguments)
+          ...
+          eval($ARGS[...])
+      - pattern: |
+          $ARGS = json.loads($TOOL_CALL.function.arguments)
+          ...
+          exec($ARGS[...])
+      - pattern: |
+          $ARGS = json.loads($TOOL_CALL.function.arguments)
+          ...
+          os.system($ARGS[...])
+      - pattern: |
+          $ARGS = json.loads($TOOL_CALL.function.arguments)
+          ...
+          subprocess.run($ARGS[...], ...)
+      - pattern: |
+          $ARGS = json.loads($TOOL_CALL.function.arguments)
+          ...
+          subprocess.call($ARGS[...], ...)
+
+  # ---------------------------------------------------------------
+  # 4. Dangerous functions in LLM tool definitions — JavaScript
+  # ---------------------------------------------------------------
+  - id: manicode.llm-api-misuse.tool-calls-eval-javascript
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      LLM tool call arguments are passed directly to eval() or exec(). This
+      enables remote code execution if the LLM is manipulated through prompt
+      injection. Validate and constrain tool call arguments.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code ('Eval Injection')"
+      confidence: HIGH
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    pattern-either:
+      - pattern: |
+          $ARGS = JSON.parse($TOOL_CALL.function.arguments)
+          ...
+          eval($ARGS. ...)
+      - pattern: |
+          $ARGS = JSON.parse($TOOL_CALL.function.arguments)
+          ...
+          eval($ARGS[...])
+      - pattern: |
+          $ARGS = JSON.parse($TOOL_CALL.function.arguments)
+          ...
+          exec($ARGS. ...)
+      - pattern: |
+          $ARGS = JSON.parse($TOOL_CALL.function.arguments)
+          ...
+          execSync($ARGS. ...)

@@ -1,0 +1,100 @@
+rules:
+  - id: manicode.deserialization.go-gob-decode-http-body
+    message: >-
+      gob.NewDecoder decoding directly from an HTTP request body
+      deserializes arbitrary Go types. While Go's gob is not as dangerous
+      as Java/Python serialization, it can still cause denial of service
+      and unexpected behavior with untrusted input. Validate and
+      size-limit input before decoding.
+    severity: WARNING
+    languages:
+      - go
+    patterns:
+      - pattern: gob.NewDecoder($REQ.Body).Decode($X)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: MEDIUM
+
+  - id: manicode.deserialization.go-gob-decode-generic
+    message: >-
+      gob.NewDecoder().Decode() deserializes Go types from an arbitrary
+      reader. If the reader is connected to a network source or untrusted
+      input, this can cause denial of service or unexpected behavior.
+      Validate and size-limit input before decoding with gob.
+    severity: WARNING
+    languages:
+      - go
+    pattern: gob.NewDecoder($READER).Decode($X)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: LOW
+
+  - id: manicode.deserialization.go-xml-decoder-no-entity-limit
+    message: >-
+      xml.NewDecoder without setting Entity or token limits may be
+      vulnerable to XML entity expansion attacks (billion laughs) causing
+      denial of service. Set d.Entity to a restricted map and limit input
+      size.
+    severity: WARNING
+    languages:
+      - go
+    pattern: xml.NewDecoder($READER)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-776: Improper Restriction of Recursive Entity References in DTDs"
+      confidence: LOW
+
+  - id: manicode.deserialization.go-yaml-unmarshal-request-body
+    message: >-
+      yaml.Unmarshal called on data read from an HTTP request body.
+      YAML deserialization of untrusted input can lead to unexpected
+      object creation and resource exhaustion. Validate input size and
+      content before unmarshaling.
+    severity: WARNING
+    languages:
+      - go
+    patterns:
+      - pattern: |
+          $DATA, $ERR := ioutil.ReadAll($REQ.Body)
+          ...
+          yaml.Unmarshal($DATA, $OUT)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: MEDIUM
+
+  - id: manicode.deserialization.go-yaml-unmarshal-request-body-io
+    message: >-
+      yaml.Unmarshal called on data read from an HTTP request body via
+      io.ReadAll. YAML deserialization of untrusted input can lead to
+      unexpected object creation and resource exhaustion. Validate input
+      size and content before unmarshaling.
+    severity: WARNING
+    languages:
+      - go
+    patterns:
+      - pattern: |
+          $DATA, $ERR := io.ReadAll($REQ.Body)
+          ...
+          yaml.Unmarshal($DATA, $OUT)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: MEDIUM

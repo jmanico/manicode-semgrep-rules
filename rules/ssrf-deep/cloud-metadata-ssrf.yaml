@@ -1,0 +1,247 @@
+rules:
+  # ---------------------------------------------------------------------------
+  # Python – hardcoded metadata endpoint access
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.cloud-metadata-hardcoded-python
+    message: >-
+      Direct HTTP request to a cloud metadata endpoint (169.254.169.254 or
+      metadata.google.internal). An attacker who controls the URL or any part of
+      it can exfiltrate cloud credentials via SSRF.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: requests.get("=~/.*169\\.254\\.169\\.254.*/", ...)
+          - pattern: requests.post("=~/.*169\\.254\\.169\\.254.*/", ...)
+          - pattern: requests.put("=~/.*169\\.254\\.169\\.254.*/", ...)
+          - pattern: requests.request($METHOD, "=~/.*169\\.254\\.169\\.254.*/", ...)
+          - pattern: requests.get("=~/.*metadata\\.google\\.internal.*/", ...)
+          - pattern: requests.post("=~/.*metadata\\.google\\.internal.*/", ...)
+          - pattern: requests.put("=~/.*metadata\\.google\\.internal.*/", ...)
+          - pattern: requests.request($METHOD, "=~/.*metadata\\.google\\.internal.*/", ...)
+          - pattern: httpx.get("=~/.*169\\.254\\.169\\.254.*/", ...)
+          - pattern: httpx.post("=~/.*169\\.254\\.169\\.254.*/", ...)
+          - pattern: httpx.AsyncClient().get("=~/.*169\\.254\\.169\\.254.*/", ...)
+          - pattern: httpx.get("=~/.*metadata\\.google\\.internal.*/", ...)
+          - pattern: httpx.post("=~/.*metadata\\.google\\.internal.*/", ...)
+          - pattern: httpx.AsyncClient().get("=~/.*metadata\\.google\\.internal.*/", ...)
+          - pattern: urllib.request.urlopen("=~/.*169\\.254\\.169\\.254.*/", ...)
+          - pattern: urllib.request.urlopen("=~/.*metadata\\.google\\.internal.*/", ...)
+          - pattern: urllib.request.Request("=~/.*169\\.254\\.169\\.254.*/", ...)
+          - pattern: urllib.request.Request("=~/.*metadata\\.google\\.internal.*/", ...)
+    metadata:
+      category: security
+      technology: [python]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Python – variable-based URL that resolves to metadata endpoint
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.cloud-metadata-url-construction-python
+    message: >-
+      A URL variable containing a cloud metadata address is passed to an HTTP
+      client. If this value is constructed from user input, it enables SSRF to
+      the cloud metadata service.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern: |
+                  $URL = "=~/.*169\\.254\\.169\\.254.*/"
+                  ...
+                  requests.$METHOD($URL, ...)
+          - patterns:
+              - pattern: |
+                  $URL = "=~/.*metadata\\.google\\.internal.*/"
+                  ...
+                  requests.$METHOD($URL, ...)
+          - patterns:
+              - pattern: |
+                  $URL = "=~/.*169\\.254\\.169\\.254.*/"
+                  ...
+                  httpx.$METHOD($URL, ...)
+          - patterns:
+              - pattern: |
+                  $URL = "=~/.*metadata\\.google\\.internal.*/"
+                  ...
+                  httpx.$METHOD($URL, ...)
+          - patterns:
+              - pattern: |
+                  $URL = "=~/.*169\\.254\\.169\\.254.*/"
+                  ...
+                  urllib.request.urlopen($URL, ...)
+          - patterns:
+              - pattern: |
+                  $URL = "=~/.*metadata\\.google\\.internal.*/"
+                  ...
+                  urllib.request.urlopen($URL, ...)
+    metadata:
+      category: security
+      technology: [python]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # JavaScript – hardcoded metadata endpoint access
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.cloud-metadata-hardcoded-javascript
+    message: >-
+      Direct HTTP request to a cloud metadata endpoint (169.254.169.254 or
+      metadata.google.internal). An attacker who controls the URL or any part of
+      it can exfiltrate cloud credentials via SSRF.
+    severity: ERROR
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: axios.get("=~/.*169\\.254\\.169\\.254.*/", ...)
+          - pattern: axios.post("=~/.*169\\.254\\.169\\.254.*/", ...)
+          - pattern: axios.put("=~/.*169\\.254\\.169\\.254.*/", ...)
+          - pattern: axios("=~/.*169\\.254\\.169\\.254.*/", ...)
+          - pattern: axios.get("=~/.*metadata\\.google\\.internal.*/", ...)
+          - pattern: axios.post("=~/.*metadata\\.google\\.internal.*/", ...)
+          - pattern: axios.put("=~/.*metadata\\.google\\.internal.*/", ...)
+          - pattern: axios("=~/.*metadata\\.google\\.internal.*/", ...)
+          - pattern: fetch("=~/.*169\\.254\\.169\\.254.*/", ...)
+          - pattern: fetch("=~/.*metadata\\.google\\.internal.*/", ...)
+          - pattern: http.get("=~/.*169\\.254\\.169\\.254.*/", ...)
+          - pattern: http.request("=~/.*169\\.254\\.169\\.254.*/", ...)
+          - pattern: https.get("=~/.*169\\.254\\.169\\.254.*/", ...)
+          - pattern: https.request("=~/.*169\\.254\\.169\\.254.*/", ...)
+          - pattern: http.get("=~/.*metadata\\.google\\.internal.*/", ...)
+          - pattern: http.request("=~/.*metadata\\.google\\.internal.*/", ...)
+          - pattern: https.get("=~/.*metadata\\.google\\.internal.*/", ...)
+          - pattern: https.request("=~/.*metadata\\.google\\.internal.*/", ...)
+    metadata:
+      category: security
+      technology: [javascript, typescript]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # JavaScript – variable-based URL to metadata endpoint
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.cloud-metadata-url-construction-javascript
+    message: >-
+      A URL variable containing a cloud metadata address is passed to an HTTP
+      client. If this value is constructed from user input, it enables SSRF to
+      the cloud metadata service.
+    severity: WARNING
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern: |
+                  $URL = "=~/.*169\\.254\\.169\\.254.*/";
+                  ...
+                  fetch($URL, ...);
+          - patterns:
+              - pattern: |
+                  $URL = "=~/.*metadata\\.google\\.internal.*/";
+                  ...
+                  fetch($URL, ...);
+          - patterns:
+              - pattern: |
+                  $URL = "=~/.*169\\.254\\.169\\.254.*/";
+                  ...
+                  axios.get($URL, ...);
+          - patterns:
+              - pattern: |
+                  $URL = "=~/.*metadata\\.google\\.internal.*/";
+                  ...
+                  axios.get($URL, ...);
+    metadata:
+      category: security
+      technology: [javascript, typescript]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # Java – hardcoded metadata endpoint access
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.cloud-metadata-hardcoded-java
+    message: >-
+      Direct HTTP request to a cloud metadata endpoint (169.254.169.254 or
+      metadata.google.internal). An attacker who controls the URL can exfiltrate
+      cloud credentials via SSRF.
+    severity: ERROR
+    languages: [java]
+    patterns:
+      - pattern-either:
+          - pattern: new java.net.URL("=~/.*169\\.254\\.169\\.254.*/").openConnection(...)
+          - pattern: new java.net.URL("=~/.*metadata\\.google\\.internal.*/").openConnection(...)
+          - pattern: new URL("=~/.*169\\.254\\.169\\.254.*/").openConnection(...)
+          - pattern: new URL("=~/.*metadata\\.google\\.internal.*/").openConnection(...)
+          - pattern: java.net.URI.create("=~/.*169\\.254\\.169\\.254.*/")
+          - pattern: java.net.URI.create("=~/.*metadata\\.google\\.internal.*/")
+          - pattern: URI.create("=~/.*169\\.254\\.169\\.254.*/")
+          - pattern: URI.create("=~/.*metadata\\.google\\.internal.*/")
+          - pattern: HttpClient.newHttpClient().send(HttpRequest.newBuilder().uri(URI.create("=~/.*169\\.254\\.169\\.254.*/")).build(), ...)
+          - pattern: HttpClient.newHttpClient().send(HttpRequest.newBuilder().uri(URI.create("=~/.*metadata\\.google\\.internal.*/")).build(), ...)
+    metadata:
+      category: security
+      technology: [java]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Go – hardcoded metadata endpoint access
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.cloud-metadata-hardcoded-go
+    message: >-
+      Direct HTTP request to a cloud metadata endpoint (169.254.169.254 or
+      metadata.google.internal). An attacker who controls the URL can exfiltrate
+      cloud credentials via SSRF.
+    severity: ERROR
+    languages: [go]
+    patterns:
+      - pattern-either:
+          - pattern: http.Get("=~/.*169\\.254\\.169\\.254.*/")
+          - pattern: http.Get("=~/.*metadata\\.google\\.internal.*/")
+          - pattern: http.Post("=~/.*169\\.254\\.169\\.254.*/", ...)
+          - pattern: http.Post("=~/.*metadata\\.google\\.internal.*/", ...)
+          - pattern: http.NewRequest($METHOD, "=~/.*169\\.254\\.169\\.254.*/", ...)
+          - pattern: http.NewRequest($METHOD, "=~/.*metadata\\.google\\.internal.*/", ...)
+    metadata:
+      category: security
+      technology: [go]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Go – variable-based URL to metadata endpoint
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.cloud-metadata-url-construction-go
+    message: >-
+      A URL variable containing a cloud metadata address is passed to an HTTP
+      function. This may enable SSRF to the cloud metadata service.
+    severity: WARNING
+    languages: [go]
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern: |
+                  $URL := "=~/.*169\\.254\\.169\\.254.*/"
+                  ...
+                  http.Get($URL)
+          - patterns:
+              - pattern: |
+                  $URL := "=~/.*metadata\\.google\\.internal.*/"
+                  ...
+                  http.Get($URL)
+          - patterns:
+              - pattern: |
+                  $URL := "=~/.*169\\.254\\.169\\.254.*/"
+                  ...
+                  http.NewRequest($METHOD, $URL, ...)
+          - patterns:
+              - pattern: |
+                  $URL := "=~/.*metadata\\.google\\.internal.*/"
+                  ...
+                  http.NewRequest($METHOD, $URL, ...)
+    metadata:
+      category: security
+      technology: [go]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: MEDIUM

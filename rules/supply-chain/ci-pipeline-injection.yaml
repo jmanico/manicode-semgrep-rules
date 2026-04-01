@@ -1,0 +1,161 @@
+rules:
+  # ---------------------------------------------------------------
+  # Detect GitHub Actions expression injection via github.event.*
+  # in run: commands
+  # ---------------------------------------------------------------
+  - id: manicode.supply-chain.gha-expression-injection-event-title
+    message: >
+      GitHub Actions workflow injects github.event data directly
+      into a run: command. An attacker can craft a PR title, branch
+      name, or comment body to inject arbitrary shell commands.
+      Use an intermediate environment variable instead:
+      env: TITLE: ${{github.event.pull_request.title}}
+    severity: ERROR
+    languages:
+      - yaml
+    patterns:
+      - pattern: |
+          run: ... ${{ github.event.pull_request.title }} ...
+    paths:
+      include:
+        - ".github/workflows/*.yml"
+        - ".github/workflows/*.yaml"
+
+  - id: manicode.supply-chain.gha-expression-injection-event-body
+    message: >
+      GitHub Actions workflow injects github.event.comment.body or
+      github.event.issue.body directly into a run: command. An
+      attacker can inject arbitrary shell commands via issue or
+      comment content. Use an intermediate environment variable.
+    severity: ERROR
+    languages:
+      - yaml
+    pattern-either:
+      - pattern: |
+          run: ... ${{ github.event.comment.body }} ...
+      - pattern: |
+          run: ... ${{ github.event.issue.body }} ...
+      - pattern: |
+          run: ... ${{ github.event.pull_request.body }} ...
+    paths:
+      include:
+        - ".github/workflows/*.yml"
+        - ".github/workflows/*.yaml"
+
+  - id: manicode.supply-chain.gha-expression-injection-head-ref
+    message: >
+      GitHub Actions workflow injects github.event.pull_request.head
+      or github.head_ref directly into a run: command. An attacker
+      can create a branch with shell metacharacters in the name to
+      inject commands. Use an intermediate environment variable.
+    severity: ERROR
+    languages:
+      - yaml
+    pattern-either:
+      - pattern: |
+          run: ... ${{ github.head_ref }} ...
+      - pattern: |
+          run: ... ${{ github.event.pull_request.head.ref }} ...
+    paths:
+      include:
+        - ".github/workflows/*.yml"
+        - ".github/workflows/*.yaml"
+
+  # ---------------------------------------------------------------
+  # Detect unpinned GitHub Actions (using @master, @main, or @v*)
+  # instead of a SHA commit hash
+  # ---------------------------------------------------------------
+  - id: manicode.supply-chain.gha-unpinned-action-master
+    message: >
+      GitHub Actions step uses an unpinned action reference (@master).
+      A compromised or force-pushed master branch would execute
+      arbitrary code in your CI. Pin actions to a full SHA commit
+      hash, e.g. uses: actions/checkout@a1b2c3d4...
+    severity: WARNING
+    languages:
+      - yaml
+    pattern: |
+      uses: $ACTION@master
+    paths:
+      include:
+        - ".github/workflows/*.yml"
+        - ".github/workflows/*.yaml"
+
+  - id: manicode.supply-chain.gha-unpinned-action-main
+    message: >
+      GitHub Actions step uses an unpinned action reference (@main).
+      A compromised or force-pushed main branch would execute
+      arbitrary code in your CI. Pin actions to a full SHA commit
+      hash, e.g. uses: actions/checkout@a1b2c3d4...
+    severity: WARNING
+    languages:
+      - yaml
+    pattern: |
+      uses: $ACTION@main
+    paths:
+      include:
+        - ".github/workflows/*.yml"
+        - ".github/workflows/*.yaml"
+
+  # ---------------------------------------------------------------
+  # Detect curl|bash install patterns in CI/CD configs
+  # ---------------------------------------------------------------
+  - id: manicode.supply-chain.ci-curl-pipe-bash
+    message: >
+      CI configuration downloads and executes a remote script via
+      curl piped to bash. This pattern is vulnerable to man-in-the-
+      middle attacks and compromised hosting. Download the script
+      first, verify its checksum, then execute it.
+    severity: ERROR
+    languages:
+      - yaml
+    pattern-either:
+      - pattern: |
+          run: ... curl ... | bash ...
+      - pattern: |
+          run: ... curl ... | sh ...
+      - pattern: |
+          run: ... wget ... | bash ...
+      - pattern: |
+          run: ... wget ... | sh ...
+    paths:
+      include:
+        - ".github/workflows/*.yml"
+        - ".github/workflows/*.yaml"
+        - ".gitlab-ci.yml"
+        - ".circleci/config.yml"
+
+  - id: manicode.supply-chain.ci-curl-pipe-bash-multiline
+    message: >
+      CI run block downloads and executes a remote script via
+      curl piped to a shell. This pattern is vulnerable to MITM
+      attacks and compromised script hosting. Download the script,
+      verify its checksum, then execute separately.
+    severity: ERROR
+    languages:
+      - yaml
+    pattern-either:
+      - pattern: |
+          run: |
+            ...
+            curl ... | bash
+            ...
+      - pattern: |
+          run: |
+            ...
+            curl ... | sh
+            ...
+      - pattern: |
+          run: |
+            ...
+            wget ... | bash
+            ...
+      - pattern: |
+          run: |
+            ...
+            wget ... | sh
+            ...
+    paths:
+      include:
+        - ".github/workflows/*.yml"
+        - ".github/workflows/*.yaml"

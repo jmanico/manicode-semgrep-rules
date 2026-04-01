@@ -1,0 +1,355 @@
+rules:
+  # ---------------------------------------------------------------------------
+  # Python – f-string URL construction with user input as host/port
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.fstring-url-construction-python
+    message: >-
+      User input from a request parameter is interpolated into a URL via
+      f-string or .format(). If the user controls the host or port portion,
+      this enables SSRF. Validate and allowlist target hosts.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern: $FUNC(f"http://{$VAR}...", ...)
+              - metavariable-pattern:
+                  metavariable: $FUNC
+                  pattern-either:
+                    - pattern: requests.get
+                    - pattern: requests.post
+                    - pattern: requests.put
+                    - pattern: requests.delete
+                    - pattern: requests.request
+                    - pattern: httpx.get
+                    - pattern: httpx.post
+                    - pattern: urllib.request.urlopen
+          - patterns:
+              - pattern: $FUNC(f"https://{$VAR}...", ...)
+              - metavariable-pattern:
+                  metavariable: $FUNC
+                  pattern-either:
+                    - pattern: requests.get
+                    - pattern: requests.post
+                    - pattern: requests.put
+                    - pattern: requests.delete
+                    - pattern: requests.request
+                    - pattern: httpx.get
+                    - pattern: httpx.post
+                    - pattern: urllib.request.urlopen
+          - patterns:
+              - pattern: $FUNC("http://{}...".format($VAR), ...)
+              - metavariable-pattern:
+                  metavariable: $FUNC
+                  pattern-either:
+                    - pattern: requests.get
+                    - pattern: requests.post
+                    - pattern: requests.put
+                    - pattern: requests.delete
+                    - pattern: requests.request
+                    - pattern: httpx.get
+                    - pattern: httpx.post
+                    - pattern: urllib.request.urlopen
+          - patterns:
+              - pattern: $FUNC("https://{}...".format($VAR), ...)
+              - metavariable-pattern:
+                  metavariable: $FUNC
+                  pattern-either:
+                    - pattern: requests.get
+                    - pattern: requests.post
+                    - pattern: requests.put
+                    - pattern: requests.delete
+                    - pattern: requests.request
+                    - pattern: httpx.get
+                    - pattern: httpx.post
+                    - pattern: urllib.request.urlopen
+    metadata:
+      category: security
+      technology: [python]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # Python – request param directly in URL string
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.request-param-in-url-python
+    message: >-
+      A request parameter is used directly in URL construction passed to an
+      HTTP client. This enables SSRF if the attacker controls the host, port,
+      or path. Use an allowlist of permitted destinations.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: requests.$METHOD(f"...{request.args[$KEY]}...", ...)
+          - pattern: requests.$METHOD(f"...{request.form[$KEY]}...", ...)
+          - pattern: requests.$METHOD(f"...{request.json[$KEY]}...", ...)
+          - pattern: requests.$METHOD(f"...{request.args.get($KEY)}...", ...)
+          - pattern: httpx.$METHOD(f"...{request.args[$KEY]}...", ...)
+          - pattern: httpx.$METHOD(f"...{request.form[$KEY]}...", ...)
+          - pattern: httpx.$METHOD(f"...{request.json[$KEY]}...", ...)
+    metadata:
+      category: security
+      technology: [python]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Python – string concatenation URL with user input
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.string-concat-url-python
+    message: >-
+      User input is concatenated into a URL string passed to an HTTP client.
+      If the user controls the host portion, this enables SSRF. Use an
+      allowlist of permitted destinations.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: requests.$METHOD("http://" + $VAR + ..., ...)
+          - pattern: requests.$METHOD("https://" + $VAR + ..., ...)
+          - pattern: httpx.$METHOD("http://" + $VAR + ..., ...)
+          - pattern: httpx.$METHOD("https://" + $VAR + ..., ...)
+          - pattern: urllib.request.urlopen("http://" + $VAR + ..., ...)
+          - pattern: urllib.request.urlopen("https://" + $VAR + ..., ...)
+    metadata:
+      category: security
+      technology: [python]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # JavaScript – template literal URL with user-controlled host
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.template-literal-url-javascript
+    message: >-
+      User-controlled input is interpolated into a URL via template literal
+      and passed to an HTTP client. If the user controls the host or port, this
+      enables SSRF. Validate and allowlist target hosts.
+    severity: ERROR
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: fetch(`http://${$VAR}...`, ...)
+          - pattern: fetch(`https://${$VAR}...`, ...)
+          - pattern: axios.get(`http://${$VAR}...`, ...)
+          - pattern: axios.get(`https://${$VAR}...`, ...)
+          - pattern: axios.post(`http://${$VAR}...`, ...)
+          - pattern: axios.post(`https://${$VAR}...`, ...)
+          - pattern: axios(`http://${$VAR}...`, ...)
+          - pattern: axios(`https://${$VAR}...`, ...)
+    metadata:
+      category: security
+      technology: [javascript, typescript]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # JavaScript – request param in URL construction
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.request-param-in-url-javascript
+    message: >-
+      A request parameter (req.query, req.body, req.params) is embedded in a
+      URL passed to an HTTP client. This enables SSRF if the attacker controls
+      the host or port. Use an allowlist of permitted destinations.
+    severity: ERROR
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: fetch(`...${ req.query.$PARAM }...`, ...)
+          - pattern: fetch(`...${ req.body.$PARAM }...`, ...)
+          - pattern: fetch(`...${ req.params.$PARAM }...`, ...)
+          - pattern: axios.get(`...${ req.query.$PARAM }...`, ...)
+          - pattern: axios.get(`...${ req.body.$PARAM }...`, ...)
+          - pattern: axios.get(`...${ req.params.$PARAM }...`, ...)
+          - pattern: axios.post(`...${ req.query.$PARAM }...`, ...)
+          - pattern: axios.post(`...${ req.body.$PARAM }...`, ...)
+    metadata:
+      category: security
+      technology: [javascript, typescript]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # JavaScript – string concatenation URL with user input
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.string-concat-url-javascript
+    message: >-
+      User input is concatenated into a URL string passed to an HTTP client.
+      If the user controls the host portion, this enables SSRF.
+    severity: WARNING
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: fetch("http://" + $VAR + ..., ...)
+          - pattern: fetch("https://" + $VAR + ..., ...)
+          - pattern: axios.get("http://" + $VAR + ..., ...)
+          - pattern: axios.get("https://" + $VAR + ..., ...)
+          - pattern: axios.post("http://" + $VAR + ..., ...)
+          - pattern: axios.post("https://" + $VAR + ..., ...)
+    metadata:
+      category: security
+      technology: [javascript, typescript]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # Java – string concatenation URL with user input
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.string-concat-url-java
+    message: >-
+      User-controlled input is concatenated into a URL used to open an HTTP
+      connection. If the user controls the host or port, this enables SSRF.
+      Use an allowlist of permitted destinations.
+    severity: ERROR
+    languages: [java]
+    patterns:
+      - pattern-either:
+          - pattern: new URL("http://" + $VAR + ...).openConnection(...)
+          - pattern: new URL("https://" + $VAR + ...).openConnection(...)
+          - pattern: new java.net.URL("http://" + $VAR + ...).openConnection(...)
+          - pattern: new java.net.URL("https://" + $VAR + ...).openConnection(...)
+          - pattern: URI.create("http://" + $VAR + ...)
+          - pattern: URI.create("https://" + $VAR + ...)
+    metadata:
+      category: security
+      technology: [java]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # Java – request parameter in URL construction
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.request-param-in-url-java
+    message: >-
+      A servlet request parameter is used to construct a URL for an HTTP
+      connection. This enables SSRF if the attacker controls the host, port,
+      or scheme. Use an allowlist of permitted destinations.
+    severity: ERROR
+    languages: [java]
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern: |
+                  $HOST = $REQ.getParameter(...);
+                  ...
+                  new URL("http://" + $HOST + ...).openConnection(...);
+          - patterns:
+              - pattern: |
+                  $HOST = $REQ.getParameter(...);
+                  ...
+                  new URL("https://" + $HOST + ...).openConnection(...);
+          - patterns:
+              - pattern: |
+                  $HOST = $REQ.getParameter(...);
+                  ...
+                  URI.create("http://" + $HOST + ...);
+          - patterns:
+              - pattern: |
+                  $HOST = $REQ.getParameter(...);
+                  ...
+                  URI.create("https://" + $HOST + ...);
+    metadata:
+      category: security
+      technology: [java]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Go – fmt.Sprintf URL construction with variable host
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.sprintf-url-construction-go
+    message: >-
+      A URL is built using fmt.Sprintf with a variable in the host position and
+      passed to an HTTP function. If the variable is user-controlled, this
+      enables SSRF. Use an allowlist of permitted destinations.
+    severity: WARNING
+    languages: [go]
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern: |
+                  $URL := fmt.Sprintf("http://%s...", $HOST, ...)
+                  ...
+                  http.Get($URL)
+          - patterns:
+              - pattern: |
+                  $URL := fmt.Sprintf("https://%s...", $HOST, ...)
+                  ...
+                  http.Get($URL)
+          - patterns:
+              - pattern: |
+                  $URL := fmt.Sprintf("http://%s...", $HOST, ...)
+                  ...
+                  http.NewRequest($METHOD, $URL, ...)
+          - patterns:
+              - pattern: |
+                  $URL := fmt.Sprintf("https://%s...", $HOST, ...)
+                  ...
+                  http.NewRequest($METHOD, $URL, ...)
+    metadata:
+      category: security
+      technology: [go]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # Go – string concatenation URL with variable host
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.string-concat-url-go
+    message: >-
+      User input is concatenated into a URL string passed to an HTTP function.
+      If the user controls the host portion, this enables SSRF.
+    severity: WARNING
+    languages: [go]
+    patterns:
+      - pattern-either:
+          - pattern: http.Get("http://" + $VAR + ...)
+          - pattern: http.Get("https://" + $VAR + ...)
+          - pattern: http.Post("http://" + $VAR + ..., ...)
+          - pattern: http.Post("https://" + $VAR + ..., ...)
+          - pattern: http.NewRequest($METHOD, "http://" + $VAR + ..., ...)
+          - pattern: http.NewRequest($METHOD, "https://" + $VAR + ..., ...)
+    metadata:
+      category: security
+      technology: [go]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # Go – request form/query value in URL
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.request-param-in-url-go
+    message: >-
+      An HTTP request parameter (r.FormValue, r.URL.Query) is used in URL
+      construction for an outgoing HTTP request. This enables SSRF. Use an
+      allowlist of permitted destinations.
+    severity: ERROR
+    languages: [go]
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern: |
+                  $HOST := $R.FormValue(...)
+                  ...
+                  http.Get("http://" + $HOST + ...)
+          - patterns:
+              - pattern: |
+                  $HOST := $R.FormValue(...)
+                  ...
+                  http.Get("https://" + $HOST + ...)
+          - patterns:
+              - pattern: |
+                  $HOST := $R.FormValue(...)
+                  ...
+                  http.NewRequest($METHOD, "http://" + $HOST + ..., ...)
+          - patterns:
+              - pattern: |
+                  $HOST := $R.FormValue(...)
+                  ...
+                  http.NewRequest($METHOD, "https://" + $HOST + ..., ...)
+    metadata:
+      category: security
+      technology: [go]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: HIGH

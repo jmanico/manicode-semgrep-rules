@@ -1,0 +1,151 @@
+rules:
+  # ---------------------------------------------------------------
+  # 1. Model.objects.create(**request.data) or **request.POST.dict()
+  # ---------------------------------------------------------------
+  - id: manicode.mass-assignment.django-create-request-data
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Passing request data directly to Model.objects.create() via
+      dictionary unpacking allows attackers to set any model field,
+      including sensitive ones like is_staff or price. Explicitly
+      name the fields you intend to set.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+      confidence: HIGH
+      technology:
+        - django
+      references:
+        - https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/
+    pattern-either:
+      - pattern: $MODEL.objects.create(**request.data)
+      - pattern: $MODEL.objects.create(**request.POST.dict())
+      - pattern: $MODEL.objects.create(**request.data.dict())
+      - pattern: $MODEL.objects.create(**request.POST)
+      - pattern: |
+          $DATA = request.data
+          ...
+          $MODEL.objects.create(**$DATA)
+      - pattern: |
+          $DATA = request.POST.dict()
+          ...
+          $MODEL.objects.create(**$DATA)
+
+  # ---------------------------------------------------------------
+  # 2. ModelSerializer with fields = "__all__"
+  # ---------------------------------------------------------------
+  - id: manicode.mass-assignment.django-serializer-fields-all
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Setting fields = "__all__" on a ModelSerializer Meta class exposes
+      every model field to deserialization, including sensitive or
+      internal fields. Explicitly list only the fields that should be
+      writable, or use read_only_fields for sensitive attributes.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+      confidence: HIGH
+      technology:
+        - django
+        - django-rest-framework
+      references:
+        - https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/
+    patterns:
+      - pattern: |
+          class $SERIALIZER(...):
+              ...
+              class Meta:
+                  ...
+                  fields = "__all__"
+      - metavariable-regex:
+          metavariable: $SERIALIZER
+          regex: ".*[Ss]erializer.*"
+
+  # ---------------------------------------------------------------
+  # 3. setattr() with iteration over request/user input
+  # ---------------------------------------------------------------
+  - id: manicode.mass-assignment.django-setattr-loop
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Using setattr() in a loop over request data allows an attacker
+      to set arbitrary attributes on a model instance, including
+      internal or privileged fields. Validate each key against an
+      explicit allowlist before calling setattr().
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+      confidence: HIGH
+      technology:
+        - django
+      references:
+        - https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/
+    pattern-either:
+      - pattern: |
+          for $KEY, $VALUE in request.data.items():
+              ...
+              setattr($OBJ, $KEY, $VALUE)
+              ...
+      - pattern: |
+          for $KEY, $VALUE in request.POST.items():
+              ...
+              setattr($OBJ, $KEY, $VALUE)
+              ...
+      - pattern: |
+          for $KEY, $VALUE in request.POST.dict().items():
+              ...
+              setattr($OBJ, $KEY, $VALUE)
+              ...
+      - pattern: |
+          for $KEY in request.data:
+              ...
+              setattr($OBJ, $KEY, request.data[$KEY])
+              ...
+
+  # ---------------------------------------------------------------
+  # 4. .update(**request.data) patterns
+  # ---------------------------------------------------------------
+  - id: manicode.mass-assignment.django-update-request-data
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Passing request data directly to a queryset .update() call via
+      dictionary unpacking allows attackers to modify any model field
+      in bulk, including fields they should not control. Explicitly
+      name the fields to update.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+      confidence: HIGH
+      technology:
+        - django
+      references:
+        - https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/
+    pattern-either:
+      - pattern: $QUERYSET.update(**request.data)
+      - pattern: $QUERYSET.update(**request.POST.dict())
+      - pattern: $QUERYSET.update(**request.data.dict())
+      - pattern: |
+          $DATA = request.data
+          ...
+          $QUERYSET.update(**$DATA)
+      - pattern: |
+          $DATA = request.POST.dict()
+          ...
+          $QUERYSET.update(**$DATA)
+      - pattern: $QUERYSET.filter(...).update(**request.data)
+      - pattern: $QUERYSET.filter(...).update(**request.POST.dict())
