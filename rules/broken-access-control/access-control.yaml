@@ -1,0 +1,427 @@
+rules:
+  # ---------------------------------------------------------------
+  # 1. Flask admin route without @login_required
+  # ---------------------------------------------------------------
+  - id: manicode.access-control.flask-admin-no-login-required
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Flask route with an admin path lacks @login_required decorator.
+      Any unauthenticated user can access this administrative endpoint.
+      Add @login_required (from flask_login) or an equivalent
+      authentication check before the route handler.
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-862: Missing Authorization"
+      confidence: MEDIUM
+      technology:
+        - flask
+      references:
+        - https://owasp.org/Top10/A01_2021-Broken_Access_Control/
+    patterns:
+      - pattern: |
+          @$APP.route("/admin/...", ...)
+          def $FUNC(...):
+              ...
+      - pattern-not: |
+          @login_required
+          def $FUNC(...):
+              ...
+      - pattern-not: |
+          @$APP.route("/admin/...", ...)
+          @login_required
+          def $FUNC(...):
+              ...
+
+  # ---------------------------------------------------------------
+  # 2. Django function-based view without @login_required
+  # ---------------------------------------------------------------
+  - id: manicode.access-control.django-view-no-login-required
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Django view function handling a sensitive operation (admin, delete,
+      or update) lacks @login_required or @permission_required decorator.
+      Add appropriate access control decorators to prevent unauthorized
+      access.
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-862: Missing Authorization"
+      confidence: MEDIUM
+      technology:
+        - django
+      references:
+        - https://owasp.org/Top10/A01_2021-Broken_Access_Control/
+    patterns:
+      - pattern: |
+          def $VIEW(request, ...):
+              ...
+      - pattern-not: |
+          @login_required
+          def $VIEW(request, ...):
+              ...
+      - pattern-not: |
+          @permission_required(...)
+          def $VIEW(request, ...):
+              ...
+      - metavariable-regex:
+          metavariable: $VIEW
+          regex: ".*(admin|delete|update).*"
+
+  # ---------------------------------------------------------------
+  # 3. Django class-based view without LoginRequiredMixin
+  # ---------------------------------------------------------------
+  - id: manicode.access-control.django-cbv-no-login-mixin
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Django class-based view for a sensitive operation does not inherit
+      from LoginRequiredMixin or PermissionRequiredMixin. Add the
+      appropriate mixin to enforce authentication and authorization.
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-862: Missing Authorization"
+      confidence: MEDIUM
+      technology:
+        - django
+      references:
+        - https://owasp.org/Top10/A01_2021-Broken_Access_Control/
+    patterns:
+      - pattern: |
+          class $VIEW(..., View, ...):
+              ...
+      - pattern-not: |
+          class $VIEW(..., LoginRequiredMixin, ...):
+              ...
+      - pattern-not: |
+          class $VIEW(..., PermissionRequiredMixin, ...):
+              ...
+      - metavariable-regex:
+          metavariable: $VIEW
+          regex: ".*(Admin|Delete|Update).*"
+
+  # ---------------------------------------------------------------
+  # 4. Express admin route without auth middleware
+  # ---------------------------------------------------------------
+  - id: manicode.access-control.express-admin-no-auth-middleware
+    languages: [javascript]
+    severity: WARNING
+    message: >-
+      Express route handler for an admin path has no middleware in the
+      handler chain. The route passes directly from path to (req, res)
+      handler without any authentication or authorization middleware.
+      Add an auth middleware function before the final handler.
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-862: Missing Authorization"
+      confidence: MEDIUM
+      technology:
+        - express
+      references:
+        - https://owasp.org/Top10/A01_2021-Broken_Access_Control/
+    pattern-either:
+      - pattern: $APP.get("=~/.*admin.*/", function($REQ, $RES) { ... })
+      - pattern: $APP.post("=~/.*admin.*/", function($REQ, $RES) { ... })
+      - pattern: $APP.put("=~/.*admin.*/", function($REQ, $RES) { ... })
+      - pattern: $APP.delete("=~/.*admin.*/", function($REQ, $RES) { ... })
+      - pattern: $APP.get("=~/.*admin.*/", ($REQ, $RES) => { ... })
+      - pattern: $APP.post("=~/.*admin.*/", ($REQ, $RES) => { ... })
+      - pattern: $APP.put("=~/.*admin.*/", ($REQ, $RES) => { ... })
+      - pattern: $APP.delete("=~/.*admin.*/", ($REQ, $RES) => { ... })
+
+  # ---------------------------------------------------------------
+  # 5. FastAPI endpoint without Depends() for auth
+  # ---------------------------------------------------------------
+  - id: manicode.access-control.fastapi-no-auth-dependency
+    languages: [python]
+    severity: WARNING
+    message: >-
+      FastAPI endpoint for a sensitive operation does not use a Depends()
+      parameter for authentication or authorization. Inject an auth
+      dependency (e.g., Depends(get_current_user)) to enforce access
+      control on this endpoint.
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-862: Missing Authorization"
+      confidence: MEDIUM
+      technology:
+        - fastapi
+      references:
+        - https://owasp.org/Top10/A01_2021-Broken_Access_Control/
+    patterns:
+      - pattern-either:
+          - pattern: |
+              @$APP.get($PATH, ...)
+              def $FUNC(...):
+                  ...
+          - pattern: |
+              @$APP.post($PATH, ...)
+              def $FUNC(...):
+                  ...
+          - pattern: |
+              @$APP.put($PATH, ...)
+              def $FUNC(...):
+                  ...
+          - pattern: |
+              @$APP.delete($PATH, ...)
+              def $FUNC(...):
+                  ...
+          - pattern: |
+              @$APP.get($PATH, ...)
+              async def $FUNC(...):
+                  ...
+          - pattern: |
+              @$APP.post($PATH, ...)
+              async def $FUNC(...):
+                  ...
+          - pattern: |
+              @$APP.put($PATH, ...)
+              async def $FUNC(...):
+                  ...
+          - pattern: |
+              @$APP.delete($PATH, ...)
+              async def $FUNC(...):
+                  ...
+      - pattern-not: |
+          @$APP.$METHOD($PATH, ..., dependencies=[$DEP, ...], ...)
+          def $FUNC(...):
+              ...
+      - pattern-not: |
+          @$APP.$METHOD($PATH, ..., dependencies=[$DEP, ...], ...)
+          async def $FUNC(...):
+              ...
+      - pattern-not: |
+          def $FUNC(..., $PARAM = Depends(...), ...):
+              ...
+      - pattern-not: |
+          async def $FUNC(..., $PARAM = Depends(...), ...):
+              ...
+      - metavariable-regex:
+          metavariable: $FUNC
+          regex: ".*(admin|delete|update).*"
+
+  # ---------------------------------------------------------------
+  # 6. Spring @DeleteMapping/@PutMapping without @PreAuthorize
+  # ---------------------------------------------------------------
+  - id: manicode.access-control.spring-no-preauthorize
+    languages: [java]
+    severity: WARNING
+    message: >-
+      Spring controller method with @DeleteMapping or @PutMapping lacks
+      @PreAuthorize or @Secured annotation. These mutating operations
+      should have explicit authorization checks to prevent unauthorized
+      modifications or deletions.
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-862: Missing Authorization"
+      confidence: MEDIUM
+      technology:
+        - spring
+      references:
+        - https://owasp.org/Top10/A01_2021-Broken_Access_Control/
+    patterns:
+      - pattern-either:
+          - pattern: |
+              @DeleteMapping(...)
+              $RET $METHOD(...) { ... }
+          - pattern: |
+              @PutMapping(...)
+              $RET $METHOD(...) { ... }
+          - pattern: |
+              @DeleteMapping
+              $RET $METHOD(...) { ... }
+          - pattern: |
+              @PutMapping
+              $RET $METHOD(...) { ... }
+      - pattern-not: |
+          @PreAuthorize(...)
+          $RET $METHOD(...) { ... }
+      - pattern-not: |
+          @Secured(...)
+          $RET $METHOD(...) { ... }
+
+  # ---------------------------------------------------------------
+  # 7. IDOR: Django ORM get() from request params without user filter
+  # ---------------------------------------------------------------
+  - id: manicode.access-control.idor-django-no-user-filter
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Direct object reference from request parameters to Django ORM
+      lookup without filtering by the authenticated user. An attacker
+      can enumerate IDs to access other users' records. Add a filter
+      on request.user or the owning user field (e.g.,
+      Model.objects.get(id=..., user=request.user)).
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-639: Authorization Bypass Through User-Controlled Key"
+      confidence: MEDIUM
+      technology:
+        - django
+      references:
+        - https://owasp.org/Top10/A01_2021-Broken_Access_Control/
+    pattern-either:
+      - pattern: $MODEL.objects.get(id=request.GET["id"])
+      - pattern: $MODEL.objects.get(id=request.GET.get("id"))
+      - pattern: $MODEL.objects.get(id=request.POST["id"])
+      - pattern: $MODEL.objects.get(id=request.POST.get("id"))
+      - pattern: $MODEL.objects.get(id=request.data["id"])
+      - pattern: $MODEL.objects.get(id=request.data.get("id"))
+      - pattern: $MODEL.objects.get(pk=request.GET["id"])
+      - pattern: $MODEL.objects.get(pk=request.GET.get("id"))
+      - pattern: $MODEL.objects.get(pk=request.POST["id"])
+      - pattern: $MODEL.objects.get(pk=request.data["id"])
+      - pattern: |
+          $ID = request.GET["id"]
+          ...
+          $MODEL.objects.get(id=$ID)
+      - pattern: |
+          $ID = request.data["id"]
+          ...
+          $MODEL.objects.get(id=$ID)
+      - pattern: |
+          $ID = request.GET.get("id")
+          ...
+          $MODEL.objects.get(id=$ID)
+
+  # ---------------------------------------------------------------
+  # 8. IDOR: Express findById from req.params without user check
+  # ---------------------------------------------------------------
+  - id: manicode.access-control.idor-express-no-user-check
+    languages: [javascript]
+    severity: WARNING
+    message: >-
+      Express handler looks up a record by ID from request parameters
+      without checking req.user ownership. An attacker can access other
+      users' records by changing the ID parameter. Verify that the
+      returned record belongs to the authenticated user before
+      returning it.
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-639: Authorization Bypass Through User-Controlled Key"
+      confidence: MEDIUM
+      technology:
+        - express
+      references:
+        - https://owasp.org/Top10/A01_2021-Broken_Access_Control/
+    patterns:
+      - pattern-either:
+          - pattern: $MODEL.findById($REQ.params.$ID)
+          - pattern: $MODEL.findById($REQ.params.$ID, ...)
+          - pattern: await $MODEL.findById($REQ.params.$ID)
+          - pattern: await $MODEL.findById($REQ.params.$ID, ...)
+          - pattern: $MODEL.findByPk($REQ.params.$ID)
+          - pattern: await $MODEL.findByPk($REQ.params.$ID)
+      - pattern-not-inside: |
+          function(...) {
+              ...
+              $REQ.user
+              ...
+          }
+      - pattern-not-inside: |
+          (...) => {
+              ...
+              $REQ.user
+              ...
+          }
+      - pattern-not-inside: |
+          async function(...) {
+              ...
+              $REQ.user
+              ...
+          }
+      - pattern-not-inside: |
+          async (...) => {
+              ...
+              $REQ.user
+              ...
+          }
+
+  # ---------------------------------------------------------------
+  # 9. Express app.delete() without auth middleware
+  # ---------------------------------------------------------------
+  - id: manicode.access-control.express-delete-no-auth
+    languages: [javascript]
+    severity: WARNING
+    message: >-
+      Express DELETE route handler has no middleware in the handler
+      chain. Delete operations are destructive and should always require
+      authentication and authorization middleware before the final
+      handler.
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-862: Missing Authorization"
+      confidence: MEDIUM
+      technology:
+        - express
+      references:
+        - https://owasp.org/Top10/A01_2021-Broken_Access_Control/
+    pattern-either:
+      - pattern: $APP.delete($PATH, function($REQ, $RES) { ... })
+      - pattern: $APP.delete($PATH, ($REQ, $RES) => { ... })
+      - pattern: $ROUTER.delete($PATH, function($REQ, $RES) { ... })
+      - pattern: $ROUTER.delete($PATH, ($REQ, $RES) => { ... })
+
+  # ---------------------------------------------------------------
+  # 10. Flask DELETE route without @login_required
+  # ---------------------------------------------------------------
+  - id: manicode.access-control.flask-delete-no-auth
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Flask route accepting DELETE requests lacks @login_required
+      decorator. Delete operations are destructive and should always
+      require authentication. Add @login_required or an equivalent
+      authentication check.
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-862: Missing Authorization"
+      confidence: MEDIUM
+      technology:
+        - flask
+      references:
+        - https://owasp.org/Top10/A01_2021-Broken_Access_Control/
+    patterns:
+      - pattern: |
+          @$APP.route($PATH, methods=[..., "DELETE", ...])
+          def $FUNC(...):
+              ...
+      - pattern-not: |
+          @login_required
+          def $FUNC(...):
+              ...
+      - pattern-not: |
+          @$APP.route($PATH, methods=[..., "DELETE", ...])
+          @login_required
+          def $FUNC(...):
+              ...

@@ -1,0 +1,217 @@
+rules:
+  - id: manicode.ssti.jinja2-template-from-input
+    message: >-
+      jinja2.Template() called with a non-literal argument. If the template
+      string originates from user input, an attacker can inject Jinja2
+      template syntax to achieve server-side template injection (SSTI),
+      leading to remote code execution. Use pre-defined template files
+      loaded from a trusted template directory instead.
+    severity: ERROR
+    languages:
+      - python
+    patterns:
+      - pattern: jinja2.Template($ARG, ...)
+      - pattern-not: jinja2.Template("...", ...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-1336: Improper Neutralization of Special Elements Used in a Template Engine"
+      confidence: MEDIUM
+
+  - id: manicode.ssti.jinja2-from-string
+    message: >-
+      Environment.from_string() compiles a Jinja2 template from a runtime
+      string. If the string contains user-controlled data, an attacker can
+      inject template directives to execute arbitrary code on the server.
+      Load templates from the filesystem via Environment.get_template()
+      instead.
+    severity: ERROR
+    languages:
+      - python
+    pattern: $ENV.from_string($USER_INPUT, ...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-1336: Improper Neutralization of Special Elements Used in a Template Engine"
+      confidence: MEDIUM
+
+  - id: manicode.ssti.flask-render-template-string
+    message: >-
+      render_template_string() compiles and renders a Jinja2 template from
+      a string at runtime. Passing user-controlled data (e.g., request
+      parameters) as the template string enables server-side template
+      injection and remote code execution. Use render_template() with a
+      file-based template and pass user data as context variables instead.
+    severity: ERROR
+    languages:
+      - python
+    pattern-either:
+      - pattern: render_template_string(request.args.get(...), ...)
+      - pattern: render_template_string(request.form[$KEY], ...)
+      - pattern: render_template_string(request.args[$KEY], ...)
+      - pattern: render_template_string(request.data, ...)
+      - pattern: render_template_string(request.values[$KEY], ...)
+      - patterns:
+          - pattern: render_template_string($VAR, ...)
+          - pattern-not: render_template_string("...", ...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-1336: Improper Neutralization of Special Elements Used in a Template Engine"
+      confidence: MEDIUM
+
+  - id: manicode.ssti.mako-template-from-input
+    message: >-
+      mako.template.Template() called with a non-literal argument. If the
+      template text comes from user input, an attacker can inject Mako
+      template expressions (e.g., ${import os; os.system(...)}) to achieve
+      remote code execution. Use file-based templates loaded from a trusted
+      directory instead.
+    severity: ERROR
+    languages:
+      - python
+    patterns:
+      - pattern: mako.template.Template($ARG, ...)
+      - pattern-not: mako.template.Template("...", ...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-1336: Improper Neutralization of Special Elements Used in a Template Engine"
+      confidence: MEDIUM
+
+  - id: manicode.ssti.tornado-template-from-input
+    message: >-
+      tornado.template.Template() called with a non-literal argument. If the
+      template string is user-controlled, an attacker can inject Tornado
+      template expressions to execute arbitrary Python code on the server.
+      Use tornado.template.Loader to load templates from trusted files
+      instead.
+    severity: ERROR
+    languages:
+      - python
+    patterns:
+      - pattern: tornado.template.Template($ARG, ...).generate(...)
+      - pattern-not: tornado.template.Template("...", ...).generate(...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-1336: Improper Neutralization of Special Elements Used in a Template Engine"
+      confidence: MEDIUM
+
+  - id: manicode.ssti.freemarker-from-string
+    message: >-
+      A FreeMarker Template is created from a StringReader containing
+      dynamic input. If the template content is user-controlled, an
+      attacker can inject FreeMarker directives (e.g., <#assign> with
+      freemarker.template.utility.Execute) to achieve remote code
+      execution. Load templates from a trusted TemplateLoader instead.
+    severity: ERROR
+    languages:
+      - java
+    patterns:
+      - pattern: new Template($NAME, new StringReader($INPUT), ...)
+      - pattern-not: new Template($NAME, new StringReader("..."), ...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-1336: Improper Neutralization of Special Elements Used in a Template Engine"
+      confidence: MEDIUM
+
+  - id: manicode.ssti.velocity-evaluate
+    message: >-
+      Velocity.evaluate() compiles and renders a Velocity template from a
+      runtime string. If the template string parameter contains user input,
+      an attacker can inject Velocity Template Language (VTL) directives to
+      execute arbitrary code. Use pre-compiled, file-based templates via
+      Velocity.mergeTemplate() instead.
+    severity: ERROR
+    languages:
+      - java
+    pattern: Velocity.evaluate($CTX, $WRITER, $TAG, $USER_INPUT)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-1336: Improper Neutralization of Special Elements Used in a Template Engine"
+      confidence: MEDIUM
+
+  - id: manicode.ssti.pebble-from-string
+    message: >-
+      PebbleEngine.getTemplate() is called with a dynamic argument. If the
+      template name or content is derived from user input, this may allow
+      server-side template injection leading to remote code execution.
+      Use a fixed set of template names and never pass user input directly
+      to getTemplate().
+    severity: ERROR
+    languages:
+      - java
+    patterns:
+      - pattern: $ENGINE.getTemplate($INPUT)
+      - pattern-not: $ENGINE.getTemplate("...")
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-1336: Improper Neutralization of Special Elements Used in a Template Engine"
+      confidence: LOW
+
+  - id: manicode.ssti.thymeleaf-expression-injection
+    message: >-
+      A Spring controller returns a view name constructed via string
+      concatenation with user input. Thymeleaf preprocesses view names as
+      expressions, so an attacker can inject Thymeleaf expression language
+      (e.g., __${T(java.lang.Runtime).exec(...)}__) to achieve remote code
+      execution. Return fixed view names and pass user data via the Model
+      instead.
+    severity: ERROR
+    languages:
+      - java
+    pattern-either:
+      - pattern: |
+          return "..." + $INPUT;
+      - pattern: |
+          return $INPUT + "...";
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-1336: Improper Neutralization of Special Elements Used in a Template Engine"
+      confidence: LOW
+
+  - id: manicode.ssti.ejs-render-from-input
+    message: >-
+      ejs.render() is called with a non-literal template string. If the
+      first argument contains user-controlled data, an attacker can inject
+      EJS template delimiters (<%= %>) to execute arbitrary JavaScript on
+      the server, leading to remote code execution. Use ejs.renderFile()
+      with a trusted template file and pass user data as the data object
+      instead.
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    patterns:
+      - pattern: ejs.render($TEMPLATE, ...)
+      - pattern-not: ejs.render("...", ...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-1336: Improper Neutralization of Special Elements Used in a Template Engine"
+      confidence: MEDIUM

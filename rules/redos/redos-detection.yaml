@@ -1,0 +1,220 @@
+rules:
+  - id: manicode.redos.user-controlled-regex-javascript
+    message: >-
+      User-controlled input is passed directly to RegExp constructor,
+      enabling Regular Expression Denial of Service (ReDoS). An attacker
+      can supply a malicious pattern with catastrophic backtracking to
+      freeze the event loop. Validate or sanitize the input, use a
+      fixed pattern, or apply a regex execution timeout.
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    pattern-either:
+      - pattern: new RegExp(req.query.$X)
+      - pattern: new RegExp(req.body.$X)
+      - pattern: new RegExp(req.params.$X)
+      - pattern: new RegExp(req.query.$X, $FLAGS)
+      - pattern: new RegExp(req.body.$X, $FLAGS)
+      - pattern: new RegExp(req.params.$X, $FLAGS)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-1333: Inefficient Regular Expression Complexity"
+      confidence: HIGH
+
+  - id: manicode.redos.user-controlled-regex-python
+    message: >-
+      User-controlled input from a Flask/Django request is compiled or
+      used as a regular expression pattern. An attacker can supply a
+      malicious pattern causing catastrophic backtracking and denial of
+      service. Use a fixed pattern, validate input, or use the
+      google-re2 library for linear-time matching.
+    severity: ERROR
+    languages:
+      - python
+    pattern-either:
+      - pattern: re.compile(request.args.get($X))
+      - pattern: re.compile(request.args.get($X, ...))
+      - pattern: re.compile(request.args[$X])
+      - pattern: re.compile(request.form[$X])
+      - pattern: re.compile(request.form.get($X))
+      - pattern: re.compile(request.form.get($X, ...))
+      - pattern: re.compile(request.data[$X])
+      - pattern: re.match(request.args.get($X), ...)
+      - pattern: re.match(request.args[$X], ...)
+      - pattern: re.match(request.form[$X], ...)
+      - pattern: re.match(request.form.get($X), ...)
+      - pattern: re.search(request.args.get($X), ...)
+      - pattern: re.search(request.args[$X], ...)
+      - pattern: re.search(request.form[$X], ...)
+      - pattern: re.search(request.form.get($X), ...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-1333: Inefficient Regular Expression Complexity"
+      confidence: HIGH
+
+  - id: manicode.redos.user-controlled-regex-java
+    message: >-
+      User-controlled input from an HTTP request parameter is compiled
+      as a regular expression via Pattern.compile(). An attacker can
+      supply a malicious pattern with catastrophic backtracking to cause
+      denial of service. Use a fixed pattern, validate input, or apply
+      a match timeout.
+    severity: ERROR
+    languages:
+      - java
+    pattern-either:
+      - pattern: Pattern.compile(request.getParameter($X))
+      - pattern: Pattern.compile($REQ.getParameter($X))
+      - pattern: Pattern.compile(request.getParameter($X), $FLAGS)
+      - pattern: Pattern.compile($REQ.getParameter($X), $FLAGS)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-1333: Inefficient Regular Expression Complexity"
+      confidence: HIGH
+
+  - id: manicode.redos.string-match-user-regex-js
+    message: >-
+      A string method (match or replace) is called with user-controlled
+      input as the regex pattern. An attacker can supply a malicious
+      pattern causing catastrophic backtracking and denial of service.
+      Use a fixed pattern or sanitize user input before regex use.
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    pattern-either:
+      - pattern: $STR.match(req.query.$X)
+      - pattern: $STR.match(req.body.$X)
+      - pattern: $STR.match(req.params.$X)
+      - pattern: $STR.replace(new RegExp(req.query.$X), ...)
+      - pattern: $STR.replace(new RegExp(req.body.$X), ...)
+      - pattern: $STR.replace(new RegExp(req.params.$X), ...)
+      - pattern: $STR.replace(new RegExp(req.query.$X, $F), ...)
+      - pattern: $STR.replace(new RegExp(req.body.$X, $F), ...)
+      - pattern: $STR.replace(new RegExp(req.params.$X, $F), ...)
+      - pattern: $STR.search(req.query.$X)
+      - pattern: $STR.search(req.body.$X)
+      - pattern: $STR.search(req.params.$X)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-1333: Inefficient Regular Expression Complexity"
+      confidence: HIGH
+
+  - id: manicode.redos.user-controlled-regex-go
+    message: >-
+      User-controlled input from an HTTP request is compiled as a
+      regular expression. An attacker can supply a complex pattern
+      to cause denial of service. While Go's regexp uses a linear-time
+      engine (RE2), compiling arbitrary user patterns still allows
+      resource exhaustion via large or deeply nested expressions.
+      Validate and constrain user input before regex compilation.
+    severity: ERROR
+    languages:
+      - go
+    pattern-either:
+      - pattern: regexp.Compile(r.FormValue($X))
+      - pattern: regexp.MustCompile(r.FormValue($X))
+      - pattern: regexp.CompilePOSIX(r.FormValue($X))
+      - pattern: regexp.Compile(r.URL.Query().Get($X))
+      - pattern: regexp.MustCompile(r.URL.Query().Get($X))
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-1333: Inefficient Regular Expression Complexity"
+      confidence: HIGH
+
+  - id: manicode.redos.nested-quantifier-js
+    message: >-
+      This regular expression contains a nested quantifier pattern
+      (e.g., (.*)+, (.+)+, (.+)*, ([a-z]+)+) which causes catastrophic
+      backtracking on certain inputs. This is a classic ReDoS vector.
+      Rewrite the regex to avoid nesting quantifiers, or use a
+      linear-time regex engine.
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    pattern-either:
+      - pattern-regex: "new\\s+RegExp\\(['\"].*\\([^)]*[*+]\\)[*+].*['\"]"
+      - pattern-regex: "/.*\\([^)]*[*+]\\)[*+].*/"
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-1333: Inefficient Regular Expression Complexity"
+      confidence: MEDIUM
+
+  - id: manicode.redos.nested-quantifier-python
+    message: >-
+      This regular expression contains a nested quantifier pattern
+      (e.g., (.*)+, (.+)+, (.+)*, ([a-z]+)+) which causes catastrophic
+      backtracking on certain inputs. This is a classic ReDoS vector.
+      Rewrite the regex to avoid nesting quantifiers, or use the
+      google-re2 library for linear-time matching.
+    severity: WARNING
+    languages:
+      - python
+    pattern-either:
+      - pattern-regex: "re\\.compile\\(['\"].*\\([^)]*[*+]\\)[*+].*['\"]"
+      - pattern-regex: "re\\.match\\(['\"].*\\([^)]*[*+]\\)[*+].*['\"]"
+      - pattern-regex: "re\\.search\\(['\"].*\\([^)]*[*+]\\)[*+].*['\"]"
+      - pattern-regex: "re\\.fullmatch\\(['\"].*\\([^)]*[*+]\\)[*+].*['\"]"
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-1333: Inefficient Regular Expression Complexity"
+      confidence: MEDIUM
+
+  - id: manicode.redos.regex-no-timeout-java
+    message: >-
+      A regular expression is compiled and matched against user input
+      from an HTTP request without a timeout. Java's regex engine uses
+      backtracking and is vulnerable to ReDoS. Use a bounded matching
+      approach such as running the matcher in a separate thread with a
+      timeout, or validate that the pattern cannot cause catastrophic
+      backtracking.
+    severity: WARNING
+    languages:
+      - java
+    pattern-either:
+      - pattern: |
+          $INPUT = $REQ.getParameter(...);
+          ...
+          Pattern.compile($PATTERN).matcher($INPUT).matches();
+      - pattern: |
+          String $INPUT = $REQ.getParameter(...);
+          ...
+          Pattern.compile($PATTERN).matcher($INPUT).matches();
+      - pattern: |
+          $INPUT = $REQ.getParameter(...);
+          ...
+          Pattern.compile($PATTERN).matcher($INPUT).find();
+      - pattern: |
+          String $INPUT = $REQ.getParameter(...);
+          ...
+          Pattern.compile($PATTERN).matcher($INPUT).find();
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-1333: Inefficient Regular Expression Complexity"
+      confidence: MEDIUM

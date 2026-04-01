@@ -1,0 +1,449 @@
+rules:
+  # ──────────────────────────────────────────────
+  # Rule 1: Password / secret variables logged — Python
+  # ──────────────────────────────────────────────
+  - id: manicode.logging.password-logged-python
+    message: >-
+      Sensitive variable logged. Logging passwords, secrets, credentials,
+      or API keys exposes them in log files, SIEM systems, and log
+      aggregators. Remove the sensitive value from the log statement or
+      replace it with a masked/redacted placeholder.
+    severity: WARNING
+    languages:
+      - python
+    patterns:
+      - pattern-either:
+          - pattern: logging.info(..., $VAR, ...)
+          - pattern: logging.debug(..., $VAR, ...)
+          - pattern: logging.warning(..., $VAR, ...)
+          - pattern: logging.error(..., $VAR, ...)
+          - pattern: logging.critical(..., $VAR, ...)
+          - pattern: logging.log(..., $VAR, ...)
+          - pattern: logger.info(..., $VAR, ...)
+          - pattern: logger.debug(..., $VAR, ...)
+          - pattern: logger.warning(..., $VAR, ...)
+          - pattern: logger.error(..., $VAR, ...)
+          - pattern: logger.critical(..., $VAR, ...)
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (?i).*(password|passwd|secret|credential|api_key|secret_key|private_key).*
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-532: Insertion of Sensitive Information into Log File"
+      confidence: MEDIUM
+
+  # ──────────────────────────────────────────────
+  # Rule 2: Password / secret variables logged — JavaScript
+  # ──────────────────────────────────────────────
+  - id: manicode.logging.password-logged-javascript
+    message: >-
+      Sensitive variable logged. Logging passwords, secrets, credentials,
+      or API keys exposes them in log output. Remove the sensitive value
+      from the log statement or replace it with a redacted placeholder.
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    patterns:
+      - pattern-either:
+          - pattern: console.log(..., $VAR, ...)
+          - pattern: console.warn(..., $VAR, ...)
+          - pattern: console.error(..., $VAR, ...)
+          - pattern: console.info(..., $VAR, ...)
+          - pattern: logger.info(..., $VAR, ...)
+          - pattern: logger.debug(..., $VAR, ...)
+          - pattern: logger.warn(..., $VAR, ...)
+          - pattern: logger.error(..., $VAR, ...)
+          - pattern: log.info(..., $VAR, ...)
+          - pattern: log.debug(..., $VAR, ...)
+          - pattern: log.warn(..., $VAR, ...)
+          - pattern: log.error(..., $VAR, ...)
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (?i).*(password|passwd|secret|credential|apiKey|secretKey|privateKey|api_key|secret_key|private_key).*
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-532: Insertion of Sensitive Information into Log File"
+      confidence: MEDIUM
+
+  # ──────────────────────────────────────────────
+  # Rule 3: Password / secret variables logged — Java
+  # ──────────────────────────────────────────────
+  - id: manicode.logging.password-logged-java
+    message: >-
+      Sensitive variable logged. Logging passwords, secrets, or credentials
+      exposes them in log files. Remove the sensitive value from the log
+      statement or mask it before logging.
+    severity: WARNING
+    languages:
+      - java
+    patterns:
+      - pattern-either:
+          - pattern: logger.info($MSG + $VAR);
+          - pattern: logger.debug($MSG + $VAR);
+          - pattern: logger.warn($MSG + $VAR);
+          - pattern: logger.error($MSG + $VAR);
+          - pattern: log.info($MSG + $VAR);
+          - pattern: log.debug($MSG + $VAR);
+          - pattern: log.warn($MSG + $VAR);
+          - pattern: log.error($MSG + $VAR);
+          - pattern: logger.info($MSG, $VAR);
+          - pattern: logger.debug($MSG, $VAR);
+          - pattern: logger.warn($MSG, $VAR);
+          - pattern: logger.error($MSG, $VAR);
+          - pattern: log.info($MSG, $VAR);
+          - pattern: log.debug($MSG, $VAR);
+          - pattern: log.warn($MSG, $VAR);
+          - pattern: log.error($MSG, $VAR);
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (?i).*(password|passwd|secret|credential|apiKey|api_key).*
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-532: Insertion of Sensitive Information into Log File"
+      confidence: MEDIUM
+
+  # ──────────────────────────────────────────────
+  # Rule 4: Authorization header logged — Python
+  # ──────────────────────────────────────────────
+  - id: manicode.logging.auth-header-logged-python
+    message: >-
+      Authorization header logged. The Authorization header typically
+      contains bearer tokens or basic-auth credentials. Logging it
+      exposes authentication material. Remove the header value from log
+      output.
+    severity: WARNING
+    languages:
+      - python
+    pattern-either:
+      - pattern: logging.info(..., request.headers.get("Authorization"), ...)
+      - pattern: logging.debug(..., request.headers.get("Authorization"), ...)
+      - pattern: logging.warning(..., request.headers.get("Authorization"), ...)
+      - pattern: logging.error(..., request.headers.get("Authorization"), ...)
+      - pattern: logging.info(..., request.headers["Authorization"], ...)
+      - pattern: logging.debug(..., request.headers["Authorization"], ...)
+      - pattern: logging.warning(..., request.headers["Authorization"], ...)
+      - pattern: logging.error(..., request.headers["Authorization"], ...)
+      - pattern: logger.info(..., request.headers.get("Authorization"), ...)
+      - pattern: logger.debug(..., request.headers.get("Authorization"), ...)
+      - pattern: logger.warning(..., request.headers.get("Authorization"), ...)
+      - pattern: logger.error(..., request.headers.get("Authorization"), ...)
+      - pattern: logger.info(..., request.headers["Authorization"], ...)
+      - pattern: logger.debug(..., request.headers["Authorization"], ...)
+      - pattern: logger.warning(..., request.headers["Authorization"], ...)
+      - pattern: logger.error(..., request.headers["Authorization"], ...)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-532: Insertion of Sensitive Information into Log File"
+      confidence: HIGH
+
+  # ──────────────────────────────────────────────
+  # Rule 5: Authorization header logged — JavaScript
+  # ──────────────────────────────────────────────
+  - id: manicode.logging.auth-header-logged-javascript
+    message: >-
+      Authorization header logged. The Authorization header typically
+      contains bearer tokens or basic-auth credentials. Logging it
+      exposes authentication material. Remove the header value from log
+      output.
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    pattern-either:
+      - pattern: console.log(..., req.headers.authorization, ...)
+      - pattern: console.log(req.headers.authorization)
+      - pattern: console.warn(..., req.headers.authorization, ...)
+      - pattern: console.error(..., req.headers.authorization, ...)
+      - pattern: console.log(..., req.headers['authorization'], ...)
+      - pattern: console.log(req.headers['authorization'])
+      - pattern: logger.info(..., req.headers.authorization, ...)
+      - pattern: logger.debug(..., req.headers.authorization, ...)
+      - pattern: logger.warn(..., req.headers.authorization, ...)
+      - pattern: logger.error(..., req.headers.authorization, ...)
+      - pattern: logger.info(..., req.headers['authorization'], ...)
+      - pattern: logger.debug(..., req.headers['authorization'], ...)
+      - pattern: logger.warn(..., req.headers['authorization'], ...)
+      - pattern: logger.error(..., req.headers['authorization'], ...)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-532: Insertion of Sensitive Information into Log File"
+      confidence: HIGH
+
+  # ──────────────────────────────────────────────
+  # Rule 6: Entire request body logged — Python
+  # ──────────────────────────────────────────────
+  - id: manicode.logging.request-body-logged-python
+    message: >-
+      Entire request body logged. Request bodies may contain passwords,
+      tokens, PII, or other sensitive data. Log only the specific fields
+      you need, and redact sensitive values.
+    severity: WARNING
+    languages:
+      - python
+    pattern-either:
+      - pattern: logging.info(..., request.json, ...)
+      - pattern: logging.debug(..., request.json, ...)
+      - pattern: logging.warning(..., request.json, ...)
+      - pattern: logging.error(..., request.json, ...)
+      - pattern: logging.info(..., request.data, ...)
+      - pattern: logging.debug(..., request.data, ...)
+      - pattern: logging.warning(..., request.data, ...)
+      - pattern: logging.error(..., request.data, ...)
+      - pattern: logging.info(..., request.form, ...)
+      - pattern: logging.debug(..., request.form, ...)
+      - pattern: logging.warning(..., request.form, ...)
+      - pattern: logging.error(..., request.form, ...)
+      - pattern: logger.info(..., request.json, ...)
+      - pattern: logger.debug(..., request.json, ...)
+      - pattern: logger.warning(..., request.json, ...)
+      - pattern: logger.error(..., request.json, ...)
+      - pattern: logger.info(..., request.data, ...)
+      - pattern: logger.debug(..., request.data, ...)
+      - pattern: logger.warning(..., request.data, ...)
+      - pattern: logger.error(..., request.data, ...)
+      - pattern: logger.info(..., request.form, ...)
+      - pattern: logger.debug(..., request.form, ...)
+      - pattern: logger.warning(..., request.form, ...)
+      - pattern: logger.error(..., request.form, ...)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-532: Insertion of Sensitive Information into Log File"
+      confidence: MEDIUM
+
+  # ──────────────────────────────────────────────
+  # Rule 7: Entire request body logged — JavaScript
+  # ──────────────────────────────────────────────
+  - id: manicode.logging.request-body-logged-javascript
+    message: >-
+      Entire request body logged. Request bodies may contain passwords,
+      tokens, PII, or other sensitive data. Log only the specific fields
+      you need, and redact sensitive values.
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    pattern-either:
+      - pattern: console.log(..., req.body, ...)
+      - pattern: console.log(req.body)
+      - pattern: console.warn(..., req.body, ...)
+      - pattern: console.error(..., req.body, ...)
+      - pattern: logger.info(..., req.body, ...)
+      - pattern: logger.debug(..., req.body, ...)
+      - pattern: logger.warn(..., req.body, ...)
+      - pattern: logger.error(..., req.body, ...)
+      - pattern: log.info(..., req.body, ...)
+      - pattern: log.debug(..., req.body, ...)
+      - pattern: log.warn(..., req.body, ...)
+      - pattern: log.error(..., req.body, ...)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-532: Insertion of Sensitive Information into Log File"
+      confidence: MEDIUM
+
+  # ──────────────────────────────────────────────
+  # Rule 8: Credit card / SSN variables logged — Python & JavaScript
+  # ──────────────────────────────────────────────
+  - id: manicode.logging.credit-card-logged
+    message: >-
+      Variable that likely contains payment card or government ID data is
+      being logged. Logging PAN, credit card numbers, or SSNs violates
+      PCI-DSS and privacy regulations. Remove the value from log output
+      or mask all but the last four digits.
+    severity: WARNING
+    languages:
+      - python
+      - javascript
+      - typescript
+    patterns:
+      - pattern-either:
+          - pattern: logging.info(..., $VAR, ...)
+          - pattern: logging.debug(..., $VAR, ...)
+          - pattern: logging.warning(..., $VAR, ...)
+          - pattern: logging.error(..., $VAR, ...)
+          - pattern: logger.info(..., $VAR, ...)
+          - pattern: logger.debug(..., $VAR, ...)
+          - pattern: logger.warning(..., $VAR, ...)
+          - pattern: logger.error(..., $VAR, ...)
+          - pattern: console.log(..., $VAR, ...)
+          - pattern: console.warn(..., $VAR, ...)
+          - pattern: console.error(..., $VAR, ...)
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (?i).*(cardNumber|creditCard|ccNumber|card_number|credit_card|cc_number|pan|ssn|social_security|socialSecurity).*
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-532: Insertion of Sensitive Information into Log File"
+      confidence: MEDIUM
+
+  # ──────────────────────────────────────────────
+  # Rule 9: Exception logging in request handler — Python
+  # ──────────────────────────────────────────────
+  - id: manicode.logging.exception-logging-request-python
+    message: >-
+      Exception object logged in a handler that processes request body
+      data. The exception message or traceback may contain sensitive
+      request payload values. Log a safe summary instead of the raw
+      exception, or sanitize request data before processing.
+    severity: WARNING
+    languages:
+      - python
+    pattern-either:
+      - pattern: |
+          try:
+              ... = request.json
+              ...
+          except $ETYPE as $ERR:
+              logging.$METHOD(..., $ERR, ...)
+      - pattern: |
+          try:
+              ... = request.data
+              ...
+          except $ETYPE as $ERR:
+              logging.$METHOD(..., $ERR, ...)
+      - pattern: |
+          try:
+              ... = request.form
+              ...
+          except $ETYPE as $ERR:
+              logging.$METHOD(..., $ERR, ...)
+      - pattern: |
+          try:
+              ... = request.json
+              ...
+          except $ETYPE as $ERR:
+              logger.$METHOD(..., $ERR, ...)
+      - pattern: |
+          try:
+              ... = request.data
+              ...
+          except $ETYPE as $ERR:
+              logger.$METHOD(..., $ERR, ...)
+      - pattern: |
+          try:
+              ... = request.form
+              ...
+          except $ETYPE as $ERR:
+              logger.$METHOD(..., $ERR, ...)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-532: Insertion of Sensitive Information into Log File"
+      confidence: LOW
+
+  # ──────────────────────────────────────────────
+  # Rule 9b: Exception logging in request handler — JavaScript
+  # ──────────────────────────────────────────────
+  - id: manicode.logging.exception-logging-request-javascript
+    message: >-
+      Exception object logged in a handler that processes request body
+      data. The error message or stack trace may contain sensitive
+      request payload values. Log a safe summary instead of the raw
+      error, or sanitize request data before processing.
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    pattern-either:
+      - pattern: |
+          try {
+            ... = req.body;
+            ...
+          } catch($ERR) {
+            console.log(..., $ERR, ...);
+          }
+      - pattern: |
+          try {
+            ... = req.body;
+            ...
+          } catch($ERR) {
+            console.error(..., $ERR, ...);
+          }
+      - pattern: |
+          try {
+            ... = req.body;
+            ...
+          } catch($ERR) {
+            logger.error(..., $ERR, ...);
+          }
+      - pattern: |
+          try {
+            ... = req.body;
+            ...
+          } catch($ERR) {
+            logger.info(..., $ERR, ...);
+          }
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-532: Insertion of Sensitive Information into Log File"
+      confidence: LOW
+
+  # ──────────────────────────────────────────────
+  # Rule 10: Sensitive data logged — Go
+  # ──────────────────────────────────────────────
+  - id: manicode.logging.go-sensitive-logging
+    message: >-
+      Sensitive variable logged. Logging passwords, secrets, tokens, or
+      credentials exposes them in log output. Remove the sensitive value
+      or replace it with a redacted placeholder.
+    severity: WARNING
+    languages:
+      - go
+    patterns:
+      - pattern-either:
+          - pattern: log.Printf(..., $VAR, ...)
+          - pattern: log.Println(..., $VAR, ...)
+          - pattern: log.Fatalf(..., $VAR, ...)
+          - pattern: log.Print(..., $VAR, ...)
+          - pattern: $LOGGER.Info(..., $VAR, ...)
+          - pattern: $LOGGER.Debug(..., $VAR, ...)
+          - pattern: $LOGGER.Warn(..., $VAR, ...)
+          - pattern: $LOGGER.Error(..., $VAR, ...)
+          - pattern: $LOGGER.Fatal(..., $VAR, ...)
+          - pattern: $LOGGER.Info($MSG, zap.String($KEY, $VAR))
+          - pattern: $LOGGER.Error($MSG, zap.String($KEY, $VAR))
+          - pattern: $LOGGER.Warn($MSG, zap.String($KEY, $VAR))
+          - pattern: $LOGGER.Debug($MSG, zap.String($KEY, $VAR))
+          - pattern: log.Info().Str($KEY, $VAR)
+          - pattern: log.Error().Str($KEY, $VAR)
+          - pattern: log.Warn().Str($KEY, $VAR)
+          - pattern: log.Debug().Str($KEY, $VAR)
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (?i).*(password|passwd|secret|token|credential|apiKey|api_key|private_key|privateKey).*
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-532: Insertion of Sensitive Information into Log File"
+      confidence: MEDIUM

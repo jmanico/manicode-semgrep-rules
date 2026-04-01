@@ -1,0 +1,309 @@
+rules:
+  # ----------------------------------------------------------------
+  # None algorithm — authentication bypass via unsigned tokens
+  # ----------------------------------------------------------------
+  - id: manicode.jwt.none-algorithm-python
+    message: >-
+      JWT decode permits the "none" algorithm. An attacker can forge tokens
+      without any signature, completely bypassing authentication. Always
+      restrict algorithms to a specific signing algorithm such as HS256
+      or RS256.
+    severity: ERROR
+    languages:
+      - python
+    pattern-either:
+      - pattern: jwt.decode($TOKEN, ..., algorithms=[..., "none", ...], ...)
+      - pattern: jwt.decode($TOKEN, ..., algorithms=[..., "None", ...], ...)
+      - pattern: jwt.decode($TOKEN, ..., algorithms=[..., "NONE", ...], ...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-347: Improper Verification of Cryptographic Signature"
+      confidence: HIGH
+
+  - id: manicode.jwt.none-algorithm-javascript
+    message: >-
+      JWT verification permits the "none" algorithm. An attacker can forge
+      tokens without any signature, completely bypassing authentication.
+      Never include "none" in the algorithms list.
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    pattern-either:
+      - pattern: >
+          jwt.verify($TOKEN, $SECRET, {algorithms: [..., "none", ...]})
+      - pattern: >
+          jwt.verify($TOKEN, $SECRET, {algorithms: [..., "None", ...]})
+      - pattern: >
+          jwt.verify($TOKEN, $SECRET, {algorithms: [..., "NONE", ...]})
+      - pattern: >
+          jwt.verify($TOKEN, $SECRET, {algorithms: [..., "none", ...], ...})
+      - pattern: >
+          jwt.verify($TOKEN, $SECRET, {algorithms: [..., "None", ...], ...})
+      - pattern: >
+          jwt.verify($TOKEN, $SECRET, {algorithms: [..., "NONE", ...], ...})
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-347: Improper Verification of Cryptographic Signature"
+      confidence: HIGH
+
+  # ----------------------------------------------------------------
+  # Missing signature verification
+  # ----------------------------------------------------------------
+  - id: manicode.jwt.missing-verification-python
+    message: >-
+      JWT signature verification is disabled. This allows any forged or
+      tampered token to be accepted. Never set verify_signature to False
+      or verify to False in production code.
+    severity: WARNING
+    languages:
+      - python
+    pattern-either:
+      - pattern: >
+          jwt.decode($TOKEN, ..., options={"verify_signature": False}, ...)
+      - pattern: >
+          jwt.decode($TOKEN, ..., options={"verify_signature": False, ...}, ...)
+      - pattern: jwt.decode($TOKEN, ..., verify=False, ...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-347: Improper Verification of Cryptographic Signature"
+      confidence: HIGH
+
+  - id: manicode.jwt.missing-verification-javascript
+    message: >-
+      JWT verification is weakened or bypassed. Passing { verify: false }
+      disables signature checking, and calling jwt.decode instead of
+      jwt.verify skips verification entirely. Always use jwt.verify with
+      a valid secret and explicit algorithms list.
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    pattern-either:
+      - pattern: >
+          jwt.verify($TOKEN, $SECRET, { verify: false, ... })
+      - pattern: >
+          jwt.decode($TOKEN, { complete: true })
+      - pattern: jwt.decode($TOKEN)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-347: Improper Verification of Cryptographic Signature"
+      confidence: MEDIUM
+
+  # ----------------------------------------------------------------
+  # Algorithm confusion — missing algorithms constraint
+  # ----------------------------------------------------------------
+  - id: manicode.jwt.algorithm-confusion-javascript
+    message: >-
+      jwt.verify called without an explicit algorithms option. Without
+      restricting allowed algorithms, an attacker may switch from RS256
+      to HS256 and sign the token with the public key, bypassing
+      verification. Always specify { algorithms: ["RS256"] } or the
+      expected algorithm.
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    patterns:
+      - pattern: jwt.verify($TOKEN, $KEY, $OPTS)
+      - pattern-not: >
+          jwt.verify($TOKEN, $KEY, {algorithms: $ALGOS, ...})
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-347: Improper Verification of Cryptographic Signature"
+      confidence: MEDIUM
+
+  # ----------------------------------------------------------------
+  # Hardcoded JWT secrets
+  # ----------------------------------------------------------------
+  - id: manicode.jwt.hardcoded-jwt-secret-python
+    message: >-
+      JWT signing uses a hardcoded string secret. If the secret is
+      committed to source control, any party with repository access can
+      forge valid tokens. Load the secret from an environment variable
+      or a secrets manager.
+    severity: WARNING
+    languages:
+      - python
+    pattern: jwt.encode($PAYLOAD, "...", ...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-798: Use of Hard-coded Credentials"
+      confidence: HIGH
+
+  - id: manicode.jwt.hardcoded-jwt-secret-javascript
+    message: >-
+      JWT signing uses a hardcoded string secret. If the secret is
+      committed to source control, any party with repository access can
+      forge valid tokens. Load the secret from an environment variable
+      or a secrets manager.
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    pattern: jwt.sign($PAYLOAD, "...", ...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-798: Use of Hard-coded Credentials"
+      confidence: HIGH
+
+  # ----------------------------------------------------------------
+  # Missing expiration on JWT tokens
+  # ----------------------------------------------------------------
+  - id: manicode.jwt.missing-expiration-javascript
+    message: >-
+      jwt.sign called without an expiresIn option. Tokens without
+      expiration remain valid indefinitely, increasing the blast radius
+      of a token leak. Always set expiresIn (e.g., "15m", "1h").
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    patterns:
+      - pattern: jwt.sign($PAYLOAD, $SECRET, $OPTS)
+      - pattern-not: >
+          jwt.sign($PAYLOAD, $SECRET, {expiresIn: $EXP, ...})
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-613: Insufficient Session Expiration"
+      confidence: MEDIUM
+
+  # ----------------------------------------------------------------
+  # kid header injection — file read (path traversal)
+  # ----------------------------------------------------------------
+  - id: manicode.jwt.kid-header-file-read
+    message: >-
+      The JWT "kid" header value is used directly in a file read
+      operation. An attacker can craft a token with a kid like
+      "../../etc/passwd" to read arbitrary files from the server.
+      Validate and sanitize the kid value before using it in file paths.
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    pattern-either:
+      - pattern: |
+          $HEADER = jwt.decode($TOKEN, {complete: true});
+          ...
+          fs.readFileSync($HEADER.header.kid)
+      - pattern: |
+          $HEADER = jwt.decode($TOKEN, {complete: true});
+          ...
+          fs.readFileSync(...+ $HEADER.header.kid + ...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"
+      confidence: MEDIUM
+
+  - id: manicode.jwt.kid-header-file-read-python
+    message: >-
+      The JWT "kid" header value is used directly in a file read
+      operation. An attacker can craft a token with a kid like
+      "../../etc/passwd" to read arbitrary files from the server.
+      Validate and sanitize the kid value before using it in file paths.
+    severity: WARNING
+    languages:
+      - python
+    pattern-either:
+      - pattern: |
+          $HEADER = jwt.get_unverified_header($TOKEN)
+          ...
+          open($HEADER["kid"])
+      - pattern: |
+          $HEADER = jwt.get_unverified_header($TOKEN)
+          ...
+          open(...+ $HEADER["kid"] + ...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"
+      confidence: MEDIUM
+
+  # ----------------------------------------------------------------
+  # kid header injection — SQL injection
+  # ----------------------------------------------------------------
+  - id: manicode.jwt.kid-header-sql-injection
+    message: >-
+      The JWT "kid" header value is interpolated into a SQL query.
+      An attacker can set kid to a SQL injection payload to extract
+      data or bypass authentication. Use parameterized queries instead
+      of string concatenation.
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    pattern-either:
+      - pattern: |
+          $HEADER = jwt.decode($TOKEN, {complete: true});
+          ...
+          $DB.query("..." + $HEADER.header.kid + "...")
+      - pattern: |
+          $HEADER = jwt.decode($TOKEN, {complete: true});
+          ...
+          $DB.query(`...${$HEADER.header.kid}...`)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"
+      confidence: MEDIUM
+
+  - id: manicode.jwt.kid-header-sql-injection-python
+    message: >-
+      The JWT "kid" header value is interpolated into a SQL query.
+      An attacker can set kid to a SQL injection payload to extract
+      data or bypass authentication. Use parameterized queries instead
+      of string formatting.
+    severity: WARNING
+    languages:
+      - python
+    pattern-either:
+      - pattern: |
+          $HEADER = jwt.get_unverified_header($TOKEN)
+          ...
+          $CURSOR.execute("..." + $HEADER["kid"] + "...")
+      - pattern: |
+          $HEADER = jwt.get_unverified_header($TOKEN)
+          ...
+          $CURSOR.execute("...%s..." % $HEADER["kid"])
+      - pattern: |
+          $HEADER = jwt.get_unverified_header($TOKEN)
+          ...
+          $CURSOR.execute(f"...{$HEADER['kid']}...")
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"
+      confidence: MEDIUM

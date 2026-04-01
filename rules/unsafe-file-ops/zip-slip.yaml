@@ -1,0 +1,133 @@
+rules:
+  # ---------------------------------------------------------------------------
+  # Java – ZipEntry getName() used in File/Path without ".." check (Zip Slip)
+  # ---------------------------------------------------------------------------
+  - id: manicode.file-ops.zipslip-java
+    message: >-
+      ZipEntry.getName() is passed directly to new File() or Paths.get() without
+      checking for path traversal sequences (".."). An attacker can craft a zip
+      archive with entries like "../../etc/cron.d/backdoor" to write files
+      outside the intended directory. Validate that the resolved path starts
+      with the target directory.
+    severity: ERROR
+    languages: [java]
+    patterns:
+      - pattern-either:
+          - pattern: new File($DIR, $ENTRY.getName())
+          - pattern: new File($DIR, $ENTRY.getName(...))
+          - pattern: Paths.get($DIR, $ENTRY.getName())
+          - pattern: Paths.get($DIR, $ENTRY.getName(...))
+          - pattern: new java.io.File($DIR, $ENTRY.getName())
+          - pattern: java.nio.file.Paths.get($DIR, $ENTRY.getName())
+      - pattern-not-inside: |
+          if (...getName().contains("..") ...) { ... }
+          ...
+      - pattern-not-inside: |
+          if ($ENTRY.getName().contains("..")) { ... }
+          ...
+    metadata:
+      category: security
+      technology: [java]
+      cwe: ["CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Python – tarfile.extractall() or tarfile.extract() without filter='data'
+  # ---------------------------------------------------------------------------
+  - id: manicode.file-ops.zipslip-python-tarfile
+    message: >-
+      tarfile.extractall() or tarfile.extract() called without filter='data'.
+      Tar archives can contain entries with absolute paths or ".." sequences
+      that write files outside the intended directory (Zip Slip / tar slip).
+      Use filter='data' (Python 3.12+) or manually validate each member name.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: $TAR.extractall(...)
+          - pattern: $TAR.extract(...)
+      - pattern-not: $TAR.extractall(..., filter="data", ...)
+      - pattern-not: $TAR.extractall(..., filter='data', ...)
+      - pattern-not: $TAR.extract(..., filter="data", ...)
+      - pattern-not: $TAR.extract(..., filter='data', ...)
+    metadata:
+      category: security
+      technology: [python]
+      cwe: ["CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"]
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # Python – ZipFile.extractall() with user-controlled path
+  # ---------------------------------------------------------------------------
+  - id: manicode.file-ops.zipslip-python-zipfile
+    message: >-
+      ZipFile.extractall() is called with a path that may be user-controlled.
+      Zip archives can contain entries with ".." path components that write
+      files outside the intended extraction directory. Validate each entry name
+      in the archive or use a safe extraction wrapper.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: zipfile.ZipFile(...).extractall($PATH, ...)
+          - pattern: |
+              $ZF = zipfile.ZipFile(...)
+              ...
+              $ZF.extractall($PATH, ...)
+    metadata:
+      category: security
+      technology: [python]
+      cwe: ["CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"]
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # Go – filepath.Join with archive header.Name without validation
+  # ---------------------------------------------------------------------------
+  - id: manicode.file-ops.zipslip-go
+    message: >-
+      Archive entry name (header.Name) is joined into a file path without
+      validating that the result stays within the target directory. An attacker
+      can craft entries like "../../etc/cron.d/backdoor" to write outside the
+      intended directory. Use filepath.Rel() to verify the resolved path is
+      within the destination, or reject entries containing "..".
+    severity: ERROR
+    languages: [go]
+    patterns:
+      - pattern-either:
+          - pattern: filepath.Join($DIR, $HEADER.Name)
+          - pattern: filepath.Join($DIR, $HEADER.Name, ...)
+      - pattern-not-inside: |
+          filepath.Rel($DIR, ...)
+          ...
+      - pattern-not-inside: |
+          if strings.Contains($HEADER.Name, "..") { ... }
+          ...
+    metadata:
+      category: security
+      technology: [go]
+      cwe: ["CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # JavaScript – adm-zip or unzipper extraction without path validation
+  # ---------------------------------------------------------------------------
+  - id: manicode.file-ops.zipslip-node
+    message: >-
+      Zip extraction using adm-zip extractAllTo or unzipper extract without
+      validating entry paths. Malicious zip entries with ".." path components
+      can write files outside the intended directory. Validate that each
+      extracted path resolves within the target directory using path.resolve()
+      and startsWith().
+    severity: ERROR
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: $ZIP.extractAllTo(...)
+          - pattern: $ENTRY.pipe(unzipper.Extract(...))
+          - pattern: $STREAM.pipe(unzipper.Extract(...))
+          - pattern: $SRC.pipe(unzip.Extract(...))
+    metadata:
+      category: security
+      technology: [javascript, typescript]
+      cwe: ["CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"]
+      confidence: MEDIUM

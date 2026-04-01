@@ -1,0 +1,275 @@
+rules:
+  # ---------------------------------------------------------------
+  # 1. Introspection enabled in Apollo Server — JS/TS
+  # ---------------------------------------------------------------
+  - id: manicode.graphql.introspection-enabled-apollo
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      GraphQL introspection is explicitly enabled in Apollo Server. Introspection
+      exposes the entire API schema to attackers, enabling reconnaissance of
+      queries, mutations, types, and fields. Disable introspection in production
+      by removing the introspection option or setting it to false.
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-200: Exposure of Sensitive Information to an Unauthorized Actor"
+      confidence: HIGH
+      technology:
+        - apollo-server
+        - graphql
+      references:
+        - https://www.apollographql.com/docs/apollo-server/testing/build-run-queries/#introspection
+    pattern: |
+      new ApolloServer({..., introspection: true, ...})
+
+  # ---------------------------------------------------------------
+  # 2. GraphiQL enabled in express-graphql — JS
+  # ---------------------------------------------------------------
+  - id: manicode.graphql.graphiql-enabled
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      GraphiQL interactive IDE is enabled in express-graphql. GraphiQL provides
+      an in-browser interface for crafting and executing arbitrary GraphQL
+      queries. Disable GraphiQL in production to prevent unauthorized schema
+      exploration and query execution.
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-200: Exposure of Sensitive Information to an Unauthorized Actor"
+      confidence: HIGH
+      technology:
+        - express-graphql
+        - graphql
+      references:
+        - https://github.com/graphql/graphiql
+    pattern: |
+      graphqlHTTP({..., graphiql: true, ...})
+
+  # ---------------------------------------------------------------
+  # 3. No depth limit in Apollo Server — JS
+  # ---------------------------------------------------------------
+  - id: manicode.graphql.no-depth-limit-apollo
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Apollo Server is configured without a query depth limit. Deeply nested
+      queries can cause denial of service by consuming excessive server
+      resources. Add graphql-depth-limit or a similar library to the
+      validationRules array to restrict maximum query depth.
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-770: Allocation of Resources Without Limits or Throttling"
+      confidence: MEDIUM
+      technology:
+        - apollo-server
+        - graphql
+      references:
+        - https://www.npmjs.com/package/graphql-depth-limit
+    patterns:
+      - pattern: |
+          new ApolloServer({...})
+      - pattern-not: |
+          new ApolloServer({..., validationRules: [..., depthLimit(...), ...], ...})
+
+  # ---------------------------------------------------------------
+  # 4. No query complexity limit in Apollo Server — JS
+  # ---------------------------------------------------------------
+  - id: manicode.graphql.no-query-complexity
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Apollo Server is configured without query complexity analysis. Complex
+      queries with many fields or aliases can cause denial of service. Add
+      graphql-query-complexity (createComplexityLimitRule) or graphql-cost-analysis
+      to limit query cost.
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-770: Allocation of Resources Without Limits or Throttling"
+      confidence: MEDIUM
+      technology:
+        - apollo-server
+        - graphql
+      references:
+        - https://www.npmjs.com/package/graphql-query-complexity
+    patterns:
+      - pattern: |
+          new ApolloServer({...})
+      - pattern-not: |
+          new ApolloServer({..., validationRules: [..., createComplexityLimitRule(...), ...], ...})
+      - pattern-not: |
+          new ApolloServer({..., plugins: [..., costAnalysis(...), ...], ...})
+
+  # ---------------------------------------------------------------
+  # 5. Batching enabled in Apollo Server — JS
+  # ---------------------------------------------------------------
+  - id: manicode.graphql.batching-enabled-apollo
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Query batching is explicitly enabled in Apollo Server via
+      allowBatchedHttpRequests. Batching allows attackers to send many operations
+      in a single HTTP request, bypassing rate limiting and amplifying attacks.
+      Disable batching unless specifically required and protected by other
+      controls.
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-770: Allocation of Resources Without Limits or Throttling"
+      confidence: HIGH
+      technology:
+        - apollo-server
+        - graphql
+      references:
+        - https://www.apollographql.com/docs/apollo-server/requests/#batching
+    pattern: |
+      new ApolloServer({..., allowBatchedHttpRequests: true, ...})
+
+  # ---------------------------------------------------------------
+  # 6. SQL injection in GraphQL resolver — JS
+  # ---------------------------------------------------------------
+  - id: manicode.graphql.resolver-sql-injection
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      GraphQL resolver constructs a SQL query using template literals with
+      user-supplied arguments. This is a SQL injection vulnerability. Use
+      parameterized queries or an ORM instead of string interpolation.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"
+      confidence: MEDIUM
+      technology:
+        - graphql
+      references:
+        - https://owasp.org/www-community/attacks/SQL_Injection
+    patterns:
+      - pattern-either:
+          - pattern: |
+              ($PARENT, $ARGS, ...) => {
+                ...
+                $DB.query(`...${$ARGS. ...}...`);
+                ...
+              }
+          - pattern: |
+              ($PARENT, $ARGS, ...) => {
+                ...
+                $DB.query(`...${args. ...}...`);
+                ...
+              }
+          - pattern: |
+              async ($PARENT, $ARGS, ...) => {
+                ...
+                $DB.query(`...${$ARGS. ...}...`);
+                ...
+              }
+          - pattern: |
+              async ($PARENT, $ARGS, ...) => {
+                ...
+                $DB.query(`...${args. ...}...`);
+                ...
+              }
+          - pattern: |
+              function($PARENT, $ARGS, ...) {
+                ...
+                $DB.query(`...${$ARGS. ...}...`);
+                ...
+              }
+          - pattern: |
+              resolve($PARENT, $ARGS, ...) {
+                ...
+                $DB.query(`...${$ARGS. ...}...`);
+                ...
+              }
+
+  # ---------------------------------------------------------------
+  # 7. SQL injection in GraphQL resolver — Python (Graphene/Strawberry)
+  # ---------------------------------------------------------------
+  - id: manicode.graphql.resolver-sql-injection-python
+    languages: [python]
+    severity: ERROR
+    message: >-
+      GraphQL resolver constructs a SQL query using f-strings or format() with
+      user-supplied arguments. This is a SQL injection vulnerability. Use
+      parameterized queries or an ORM instead of string interpolation.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"
+      confidence: MEDIUM
+      technology:
+        - graphene
+        - strawberry
+        - graphql
+      references:
+        - https://owasp.org/www-community/attacks/SQL_Injection
+    pattern-either:
+      - pattern: |
+          def resolve_$FIELD(self, info, ...):
+              ...
+              cursor.execute(f"...{info.context...}...")
+              ...
+      - pattern: |
+          def resolve_$FIELD(self, info, ...):
+              ...
+              cursor.execute(f"...{$ARG}...")
+              ...
+      - pattern: |
+          def resolve_$FIELD(self, info, ...):
+              ...
+              cursor.execute("...{}...".format(...))
+              ...
+      - pattern: |
+          def $RESOLVER(self, info, ...):
+              ...
+              $DB.execute(f"...{info.context...}...")
+              ...
+
+  # ---------------------------------------------------------------
+  # 8. Permissive CORS in Spring GraphQL — Java
+  # ---------------------------------------------------------------
+  - id: manicode.graphql.spring-graphql-cors-permissive
+    languages: [java]
+    severity: WARNING
+    message: >-
+      Spring GraphQL CORS configuration uses a wildcard origin ("*"), allowing
+      any website to make cross-origin requests to the GraphQL endpoint. This
+      can enable CSRF-like attacks and data exfiltration. Restrict allowed
+      origins to specific trusted domains.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-942: Permissive Cross-domain Policy with Untrusted Domains"
+      confidence: HIGH
+      technology:
+        - spring
+        - graphql
+      references:
+        - https://docs.spring.io/spring-graphql/reference/transports.html
+    pattern-either:
+      - pattern: |
+          $REGISTRY.addMapping("...").setAllowedOrigins("*")
+      - pattern: |
+          $CONFIG.setAllowedOrigins(Arrays.asList("*"))
+      - pattern: |
+          $CONFIG.addAllowedOrigin("*")

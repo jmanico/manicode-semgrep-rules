@@ -1,0 +1,277 @@
+rules:
+  # ---------------------------------------------------------------------------
+  # 1. Implicit Grant Flow (response_type=token) - JavaScript & Python
+  # ---------------------------------------------------------------------------
+  - id: manicode.oauth.implicit-grant-flow
+    message: >-
+      OAuth implicit grant flow detected (response_type="token"). The implicit
+      flow exposes access tokens in the URL fragment, making them vulnerable to
+      interception via browser history, referrer headers, and open redirectors.
+      Use the authorization code flow with PKCE instead.
+    severity: ERROR
+    languages: [javascript, typescript, python]
+    pattern-either:
+      - pattern: response_type = "token"
+      - pattern: response_type="token"
+      - pattern: |
+          {..., response_type: "token", ...}
+      - pattern: |
+          {..., "response_type": "token", ...}
+      - pattern: |
+          $PARAMS = {..., response_type: "token", ...}
+      - pattern: |
+          $PARAMS = {..., "response_type": "token", ...}
+      - pattern: $X.response_type = "token"
+    metadata:
+      category: security
+      technology: [javascript, python]
+      cwe: ["CWE-522: Insufficiently Protected Credentials"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # 2. Token stored in localStorage - JavaScript
+  # ---------------------------------------------------------------------------
+  - id: manicode.oauth.token-in-localstorage
+    message: >-
+      OAuth token stored in localStorage. localStorage is accessible to any
+      JavaScript running on the page, making tokens vulnerable to XSS-based
+      theft. Store tokens in memory, use httpOnly secure cookies, or leverage
+      a backend-for-frontend pattern.
+    severity: WARNING
+    languages: [javascript, typescript]
+    pattern-either:
+      - pattern: localStorage.setItem("access_token", ...)
+      - pattern: localStorage.setItem("id_token", ...)
+      - pattern: localStorage.setItem("token", ...)
+      - pattern: localStorage.setItem("refresh_token", ...)
+      - pattern: localStorage.setItem('access_token', ...)
+      - pattern: localStorage.setItem('id_token', ...)
+      - pattern: localStorage.setItem('token', ...)
+      - pattern: localStorage.setItem('refresh_token', ...)
+    metadata:
+      category: security
+      technology: [javascript]
+      cwe: ["CWE-922: Insecure Storage of Sensitive Information"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # 3. Lax redirect_uri validation using startsWith - JavaScript & Python
+  # ---------------------------------------------------------------------------
+  - id: manicode.oauth.lax-redirect-uri-startswith
+    message: >-
+      redirect_uri validated using startsWith(). An attacker can register a
+      subdomain or path prefix that passes validation but redirects tokens to
+      a malicious endpoint (e.g., https://legit.com.evil.com). Use exact string
+      comparison for redirect_uri validation.
+    severity: WARNING
+    languages: [javascript, typescript, python]
+    pattern-either:
+      - pattern: $REDIRECT_URI.startsWith(...)
+      - pattern: $X.redirect_uri.startsWith(...)
+      - pattern: redirect_uri.startsWith(...)
+      - pattern: $REDIRECT_URI.startswith(...)
+      - pattern: $X.redirect_uri.startswith(...)
+      - pattern: redirect_uri.startswith(...)
+    metadata:
+      category: security
+      technology: [javascript, python]
+      cwe: ["CWE-601: URL Redirection to Untrusted Site"]
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # 4. Lax redirect_uri validation using includes - JavaScript & Python
+  # ---------------------------------------------------------------------------
+  - id: manicode.oauth.lax-redirect-uri-includes
+    message: >-
+      redirect_uri validated using includes(). This is trivially bypassable
+      because the check only tests for substring presence. An attacker can
+      craft a URI containing the expected substring while redirecting tokens
+      elsewhere. Use exact string comparison for redirect_uri validation.
+    severity: WARNING
+    languages: [javascript, typescript, python]
+    pattern-either:
+      - pattern: $REDIRECT_URI.includes(...)
+      - pattern: $X.redirect_uri.includes(...)
+      - pattern: redirect_uri.includes(...)
+      - patterns:
+          - pattern: $VAR in $REDIRECT_URI
+          - metavariable-regex:
+              metavariable: $REDIRECT_URI
+              regex: .*redirect_uri.*
+    metadata:
+      category: security
+      technology: [javascript, python]
+      cwe: ["CWE-601: URL Redirection to Untrusted Site"]
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # 5. Missing PKCE in authorization request - Python
+  # ---------------------------------------------------------------------------
+  - id: manicode.oauth.missing-pkce-authorization
+    message: >-
+      OAuth authorization URL constructed without PKCE (code_challenge parameter
+      missing). Without PKCE, the authorization code flow is vulnerable to
+      interception attacks, especially on mobile and public clients. Include
+      code_challenge and code_challenge_method parameters.
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - patterns:
+          - pattern: $SESSION = OAuth2Session(...)
+          - pattern: $URL, $STATE = $SESSION.authorization_url($ENDPOINT, ...)
+          - pattern-not: $URL, $STATE = $SESSION.authorization_url($ENDPOINT, ..., code_challenge=..., ...)
+      - patterns:
+          - pattern: $CLIENT = OAuth2Client(...)
+          - pattern: $URL = $CLIENT.create_authorization_url($ENDPOINT, ...)
+          - pattern-not: $URL = $CLIENT.create_authorization_url($ENDPOINT, ..., code_challenge=..., ...)
+    metadata:
+      category: security
+      technology: [python]
+      cwe: ["CWE-346: Origin Validation Error"]
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # 6. Open redirect in OAuth callback - Python (Flask) & JavaScript (Express)
+  # ---------------------------------------------------------------------------
+  - id: manicode.oauth.open-redirect-oauth-callback-flask
+    message: >-
+      Post-authentication redirect uses a user-supplied parameter (next, redirect,
+      returnTo) without validating against an allowlist. An attacker can craft a
+      login link that redirects the victim to a phishing site after authentication.
+      Validate the redirect target against a strict allowlist of permitted URLs.
+    severity: ERROR
+    languages: [python]
+    pattern-either:
+      - pattern: redirect(request.args.get('next'))
+      - pattern: redirect(request.args.get("next"))
+      - pattern: redirect(request.args.get('redirect'))
+      - pattern: redirect(request.args.get("redirect"))
+      - pattern: redirect(request.args.get('returnTo'))
+      - pattern: redirect(request.args.get("returnTo"))
+      - pattern: redirect(request.args.get('return_to'))
+      - pattern: redirect(request.args.get("return_to"))
+      - pattern: redirect(request.args.get('redirect_uri'))
+      - pattern: redirect(request.args.get("redirect_uri"))
+      - pattern: redirect(request.args['next'])
+      - pattern: redirect(request.args['redirect'])
+      - pattern: redirect(request.args['returnTo'])
+    metadata:
+      category: security
+      technology: [python, flask]
+      cwe: ["CWE-601: URL Redirection to Untrusted Site"]
+      confidence: HIGH
+
+  - id: manicode.oauth.open-redirect-oauth-callback-express
+    message: >-
+      Post-authentication redirect uses a user-supplied query parameter (returnTo,
+      redirect, next) without validating against an allowlist. An attacker can
+      craft a login link that redirects the victim to a phishing site after
+      authentication. Validate the redirect target against a strict allowlist
+      of permitted URLs.
+    severity: ERROR
+    languages: [javascript, typescript]
+    pattern-either:
+      - pattern: res.redirect(req.query.returnTo)
+      - pattern: res.redirect(req.query.redirect)
+      - pattern: res.redirect(req.query.next)
+      - pattern: res.redirect(req.query.return_to)
+      - pattern: res.redirect(req.query.redirect_uri)
+      - pattern: res.redirect(req.body.returnTo)
+      - pattern: res.redirect(req.body.redirect)
+      - pattern: res.redirect(req.body.next)
+    metadata:
+      category: security
+      technology: [javascript, express]
+      cwe: ["CWE-601: URL Redirection to Untrusted Site"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # 7. Passport OAuth without state verification - JavaScript
+  # ---------------------------------------------------------------------------
+  - id: manicode.oauth.passport-no-state
+    message: >-
+      Passport OAuth strategy configured without state parameter verification.
+      Without state, the OAuth flow is vulnerable to CSRF attacks where an
+      attacker can force a victim to authenticate with the attacker's account.
+      Enable the state parameter in the strategy options (state: true).
+    severity: WARNING
+    languages: [javascript, typescript]
+    pattern-either:
+      - patterns:
+          - pattern: passport.authenticate('oauth2', ...)
+          - pattern-not: |
+              passport.authenticate('oauth2', {..., state: true, ...})
+      - patterns:
+          - pattern: passport.authenticate("oauth2", ...)
+          - pattern-not: |
+              passport.authenticate("oauth2", {..., state: true, ...})
+      - patterns:
+          - pattern: passport.authenticate('google', ...)
+          - pattern-not: |
+              passport.authenticate('google', {..., state: true, ...})
+      - patterns:
+          - pattern: passport.authenticate("google", ...)
+          - pattern-not: |
+              passport.authenticate("google", {..., state: true, ...})
+      - patterns:
+          - pattern: passport.authenticate('facebook', ...)
+          - pattern-not: |
+              passport.authenticate('facebook', {..., state: true, ...})
+      - patterns:
+          - pattern: passport.authenticate("facebook", ...)
+          - pattern-not: |
+              passport.authenticate("facebook", {..., state: true, ...})
+      - patterns:
+          - pattern: passport.authenticate('github', ...)
+          - pattern-not: |
+              passport.authenticate('github', {..., state: true, ...})
+      - patterns:
+          - pattern: passport.authenticate("github", ...)
+          - pattern-not: |
+              passport.authenticate("github", {..., state: true, ...})
+    metadata:
+      category: security
+      technology: [javascript, passport]
+      cwe: ["CWE-346: Origin Validation Error"]
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # 8. Access token passed as URL query parameter - JavaScript & Python
+  # ---------------------------------------------------------------------------
+  - id: manicode.oauth.token-in-url-param
+    message: >-
+      Access token passed as a URL query parameter. Tokens in URLs are logged
+      in server access logs, browser history, referrer headers, and proxy logs.
+      Pass tokens in the Authorization header (Bearer scheme) instead.
+    severity: WARNING
+    languages: [javascript, typescript, python]
+    pattern-either:
+      - pattern: $URL + "?access_token=" + $TOKEN
+      - pattern: $URL + "?token=" + $TOKEN
+      - pattern: '`...?access_token=${$TOKEN}...`'
+      - pattern: '`...&access_token=${$TOKEN}...`'
+      - pattern: '`...?token=${$TOKEN}...`'
+      - pattern: '`...&token=${$TOKEN}...`'
+      - pattern: $URL + "?access_token=" + ...
+      - pattern: $URL + "&access_token=" + ...
+      - pattern: f"...?access_token={$TOKEN}..."
+      - pattern: f"...&access_token={$TOKEN}..."
+      - pattern: f"...?token={$TOKEN}..."
+      - pattern: f"...&token={$TOKEN}..."
+      - pattern: '"...?access_token=" + $TOKEN'
+      - pattern: '"...&access_token=" + $TOKEN'
+      - patterns:
+          - pattern: |
+              {..."access_token": $TOKEN, ...}
+          - pattern-inside: |
+              $X.get($URL, ..., params={..."access_token": $TOKEN, ...}, ...)
+      - patterns:
+          - pattern: |
+              {..., access_token: $TOKEN, ...}
+          - pattern-inside: |
+              $X.get($URL, {..., params: {..., access_token: $TOKEN, ...}, ...})
+    metadata:
+      category: security
+      technology: [javascript, python]
+      cwe: ["CWE-598: Use of GET Request Method With Sensitive Query Strings"]
+      confidence: MEDIUM

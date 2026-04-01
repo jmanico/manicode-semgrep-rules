@@ -1,0 +1,291 @@
+rules:
+  # ---------------------------------------------------------------------------
+  # JavaScript – WebSocket.Server without verifyClient (CSWSH)
+  # ---------------------------------------------------------------------------
+  - id: manicode.websocket.ws-no-origin-check
+    message: >-
+      WebSocket.Server created without a verifyClient callback. Without origin
+      verification, the server is vulnerable to Cross-Site WebSocket Hijacking
+      (CSWSH), where a malicious page can open a WebSocket connection to your
+      server using the victim's cookies. Add a verifyClient function that
+      validates the Origin header.
+    severity: ERROR
+    languages: [javascript, typescript]
+    patterns:
+      - pattern: "new WebSocket.Server({...})"
+      - pattern-not: "new WebSocket.Server({verifyClient: ...})"
+    metadata:
+      category: security
+      technology: [javascript, websocket]
+      cwe: ["CWE-1385: Missing Origin Validation in WebSockets"]
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # JavaScript – Socket.IO with CORS wildcard origin
+  # ---------------------------------------------------------------------------
+  - id: manicode.websocket.socketio-cors-wildcard
+    message: >-
+      Socket.IO server configured with cors origin set to "*". This allows any
+      website to establish a WebSocket connection, enabling Cross-Site WebSocket
+      Hijacking (CSWSH). Restrict the origin to specific trusted domains.
+    severity: ERROR
+    languages: [javascript, typescript]
+    pattern-either:
+      - pattern: "io({cors: {origin: \"*\", ...}, ...})"
+      - pattern: "new Server({cors: {origin: \"*\", ...}, ...})"
+      - pattern: "new Server($HTTP, {cors: {origin: \"*\", ...}, ...})"
+      - pattern: "io($HTTP, {cors: {origin: \"*\", ...}, ...})"
+    metadata:
+      category: security
+      technology: [javascript, socketio]
+      cwe: ["CWE-1385: Missing Origin Validation in WebSockets"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Java – Spring WebSocket allowing all origins
+  # ---------------------------------------------------------------------------
+  - id: manicode.websocket.spring-websocket-allow-all-origins
+    message: >-
+      Spring WebSocket endpoint configured with setAllowedOrigins("*") or
+      setAllowedOriginPatterns("*"), allowing connections from any origin. This
+      enables Cross-Site WebSocket Hijacking (CSWSH). Restrict allowed origins
+      to specific trusted domains.
+    severity: ERROR
+    languages: [java]
+    pattern-either:
+      - pattern: "(StompWebSocketEndpointRegistration $REG).setAllowedOrigins(\"*\")"
+      - pattern: "(StompWebSocketEndpointRegistration $REG).setAllowedOriginPatterns(\"*\")"
+      - pattern: "$REGISTRY.addEndpoint(...).setAllowedOrigins(\"*\")"
+      - pattern: "$REGISTRY.addEndpoint(...).setAllowedOriginPatterns(\"*\")"
+    metadata:
+      category: security
+      technology: [java, spring]
+      cwe: ["CWE-1385: Missing Origin Validation in WebSockets"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Go – Gorilla WebSocket CheckOrigin bypass
+  # ---------------------------------------------------------------------------
+  - id: manicode.websocket.gorilla-checkorigin-bypass
+    message: >-
+      Gorilla WebSocket Upgrader has CheckOrigin set to unconditionally return
+      true, disabling origin validation. This allows any website to establish a
+      WebSocket connection, enabling Cross-Site WebSocket Hijacking (CSWSH).
+      Implement proper origin checking in CheckOrigin.
+    severity: ERROR
+    languages: [go]
+    pattern: |
+      websocket.Upgrader{
+        ...,
+        CheckOrigin: func($R *http.Request) bool { return true },
+        ...,
+      }
+    metadata:
+      category: security
+      technology: [go, gorilla]
+      cwe: ["CWE-1385: Missing Origin Validation in WebSockets"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # JavaScript – WebSocket message passed to eval() or new Function()
+  # ---------------------------------------------------------------------------
+  - id: manicode.websocket.ws-message-eval
+    message: >-
+      WebSocket message data is passed to eval() or new Function(), enabling
+      remote code execution. An attacker who can inject or tamper with WebSocket
+      messages can execute arbitrary JavaScript. Parse messages with JSON.parse()
+      and validate the contents instead.
+    severity: ERROR
+    languages: [javascript, typescript]
+    pattern-either:
+      - pattern: |
+          $WS.on('message', function($DATA) {
+            ...
+            eval($DATA);
+            ...
+          })
+      - pattern: |
+          $WS.on('message', ($DATA) => {
+            ...
+            eval($DATA);
+            ...
+          })
+      - pattern: |
+          $WS.on('message', function($DATA) {
+            ...
+            new Function($DATA);
+            ...
+          })
+      - pattern: |
+          $WS.on('message', ($DATA) => {
+            ...
+            new Function($DATA);
+            ...
+          })
+    metadata:
+      category: security
+      technology: [javascript, websocket]
+      cwe: ["CWE-94: Improper Control of Generation of Code"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # JavaScript – WebSocket message assigned to innerHTML/outerHTML (XSS)
+  # ---------------------------------------------------------------------------
+  - id: manicode.websocket.ws-message-innerhtml
+    message: >-
+      WebSocket message data is assigned to innerHTML or outerHTML, enabling
+      Cross-Site Scripting (XSS). If an attacker can control WebSocket messages,
+      they can inject arbitrary HTML and JavaScript. Use textContent or
+      sanitize the data before inserting into the DOM.
+    severity: ERROR
+    languages: [javascript, typescript]
+    pattern-either:
+      - pattern: |
+          $WS.onmessage = function($EVENT) {
+            ...
+            $EL.innerHTML = $EVENT.data;
+            ...
+          }
+      - pattern: |
+          $WS.onmessage = ($EVENT) => {
+            ...
+            $EL.innerHTML = $EVENT.data;
+            ...
+          }
+      - pattern: |
+          $WS.onmessage = function($EVENT) {
+            ...
+            $EL.outerHTML = $EVENT.data;
+            ...
+          }
+      - pattern: |
+          $WS.onmessage = ($EVENT) => {
+            ...
+            $EL.outerHTML = $EVENT.data;
+            ...
+          }
+    metadata:
+      category: security
+      technology: [javascript, websocket]
+      cwe: ["CWE-79: Improper Neutralization of Input During Web Page Generation"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Python – Django Channels URLRouter without AuthMiddlewareStack
+  # ---------------------------------------------------------------------------
+  - id: manicode.websocket.django-channels-no-auth
+    message: >-
+      Django Channels URLRouter is used without being wrapped in
+      AuthMiddlewareStack. Without authentication middleware, WebSocket
+      connections will not have access to the authenticated user, and any
+      authorization checks in consumers will be ineffective. Wrap URLRouter
+      with AuthMiddlewareStack.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern: "URLRouter([...])"
+      - pattern-not-inside: "AuthMiddlewareStack(URLRouter([...]))"
+    metadata:
+      category: security
+      technology: [python, django]
+      cwe: ["CWE-306: Missing Authentication for Critical Function"]
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # JavaScript – WebSocket JSON.parse result used directly in DB operations
+  # ---------------------------------------------------------------------------
+  - id: manicode.websocket.ws-message-no-validation
+    message: >-
+      WebSocket message is parsed with JSON.parse and the result is used
+      directly in a database operation without validation. An attacker can send
+      crafted messages to manipulate queries, insert unexpected data, or
+      cause injection attacks. Validate and sanitize all fields from parsed
+      WebSocket messages before using them in database operations.
+    severity: WARNING
+    languages: [javascript, typescript]
+    pattern-either:
+      - pattern: |
+          $WS.on('message', function($DATA) {
+            ...
+            $PARSED = JSON.parse($DATA);
+            ...
+            $DB.query(..., $PARSED, ...);
+            ...
+          })
+      - pattern: |
+          $WS.on('message', ($DATA) => {
+            ...
+            $PARSED = JSON.parse($DATA);
+            ...
+            $DB.query(..., $PARSED, ...);
+            ...
+          })
+      - pattern: |
+          $WS.on('message', function($DATA) {
+            ...
+            $PARSED = JSON.parse($DATA);
+            ...
+            $COLLECTION.insertOne($PARSED, ...);
+            ...
+          })
+      - pattern: |
+          $WS.on('message', ($DATA) => {
+            ...
+            $PARSED = JSON.parse($DATA);
+            ...
+            $COLLECTION.insertOne($PARSED, ...);
+            ...
+          })
+      - pattern: |
+          $WS.on('message', function($DATA) {
+            ...
+            $PARSED = JSON.parse($DATA);
+            ...
+            $COLLECTION.updateOne(..., $PARSED, ...);
+            ...
+          })
+      - pattern: |
+          $WS.on('message', ($DATA) => {
+            ...
+            $PARSED = JSON.parse($DATA);
+            ...
+            $COLLECTION.updateOne(..., $PARSED, ...);
+            ...
+          })
+      - pattern: |
+          $WS.on('message', function($DATA) {
+            ...
+            $PARSED = JSON.parse($DATA);
+            ...
+            $COLLECTION.find($PARSED, ...);
+            ...
+          })
+      - pattern: |
+          $WS.on('message', ($DATA) => {
+            ...
+            $PARSED = JSON.parse($DATA);
+            ...
+            $COLLECTION.find($PARSED, ...);
+            ...
+          })
+      - pattern: |
+          $WS.on('message', function($DATA) {
+            ...
+            $PARSED = JSON.parse($DATA);
+            ...
+            $MODEL.create($PARSED, ...);
+            ...
+          })
+      - pattern: |
+          $WS.on('message', ($DATA) => {
+            ...
+            $PARSED = JSON.parse($DATA);
+            ...
+            $MODEL.create($PARSED, ...);
+            ...
+          })
+    metadata:
+      category: security
+      technology: [javascript, websocket]
+      cwe: ["CWE-20: Improper Input Validation"]
+      confidence: MEDIUM

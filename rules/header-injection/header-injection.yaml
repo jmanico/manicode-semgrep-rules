@@ -1,0 +1,406 @@
+rules:
+  # ===========================================================================
+  # CRLF / HTTP Header Injection
+  # ===========================================================================
+
+  # ---------------------------------------------------------------------------
+  # 1. JavaScript – user input passed directly to response header
+  # ---------------------------------------------------------------------------
+  - id: manicode.header-injection.crlf-node-setheader
+    message: >-
+      User-controlled input from the request is passed directly into a response
+      header. An attacker can inject CRLF characters (\r\n) to add arbitrary
+      headers or split the HTTP response. Validate or sanitize the value before
+      setting it as a header.
+    severity: WARNING
+    languages: [javascript, typescript]
+    pattern-either:
+      - pattern: res.setHeader($NAME, req.query.$PARAM)
+      - pattern: res.setHeader($NAME, req.params.$PARAM)
+      - pattern: res.setHeader($NAME, req.body.$PARAM)
+      - pattern: res.set($NAME, req.query.$PARAM)
+      - pattern: res.set($NAME, req.params.$PARAM)
+      - pattern: res.set($NAME, req.body.$PARAM)
+      - pattern: res.header($NAME, req.query.$PARAM)
+      - pattern: res.header($NAME, req.params.$PARAM)
+      - pattern: res.header($NAME, req.body.$PARAM)
+    metadata:
+      category: security
+      technology: [javascript, typescript]
+      cwe: ["CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # 2. Java – user input passed directly to response header
+  # ---------------------------------------------------------------------------
+  - id: manicode.header-injection.crlf-java-setheader
+    message: >-
+      User-controlled input from request.getParameter() is passed directly into
+      a response header via setHeader() or addHeader(). An attacker can inject
+      CRLF characters to add arbitrary headers or split the HTTP response.
+      Validate or sanitize the parameter value before setting it as a header.
+    severity: WARNING
+    languages: [java]
+    pattern-either:
+      - pattern: $RESPONSE.setHeader($NAME, $REQUEST.getParameter($PARAM))
+      - pattern: $RESPONSE.addHeader($NAME, $REQUEST.getParameter($PARAM))
+      - pattern: |
+          String $VAL = $REQUEST.getParameter($PARAM);
+          ...
+          $RESPONSE.setHeader($NAME, $VAL);
+      - pattern: |
+          String $VAL = $REQUEST.getParameter($PARAM);
+          ...
+          $RESPONSE.addHeader($NAME, $VAL);
+    metadata:
+      category: security
+      technology: [java]
+      cwe: ["CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # 3. Python (Flask) – user input in response headers
+  # ---------------------------------------------------------------------------
+  - id: manicode.header-injection.crlf-python-flask
+    message: >-
+      User-controlled input from Flask request arguments or form data is used
+      directly in a response header. An attacker can inject CRLF characters to
+      add arbitrary headers or split the HTTP response. Validate or sanitize
+      the value before including it in response headers.
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - pattern: |
+          $RESP = Response(...)
+          ...
+          $RESP.headers[$NAME] = request.args.get($PARAM)
+      - pattern: |
+          $RESP = Response(...)
+          ...
+          $RESP.headers[$NAME] = request.args[$PARAM]
+      - pattern: |
+          $RESP = Response(...)
+          ...
+          $RESP.headers[$NAME] = request.form[$PARAM]
+      - pattern: |
+          $RESP = Response(...)
+          ...
+          $RESP.headers[$NAME] = request.form.get($PARAM)
+      - pattern: |
+          $RESP = make_response(...)
+          ...
+          $RESP.headers[$NAME] = request.args.get($PARAM)
+      - pattern: |
+          $RESP = make_response(...)
+          ...
+          $RESP.headers[$NAME] = request.args[$PARAM]
+      - pattern: |
+          $RESP = make_response(...)
+          ...
+          $RESP.headers[$NAME] = request.form[$PARAM]
+      - pattern: |
+          $RESP = make_response(...)
+          ...
+          $RESP.headers[$NAME] = request.form.get($PARAM)
+      - pattern: |
+          $VAL = request.args.get($PARAM)
+          ...
+          $RESP.headers[$NAME] = $VAL
+      - pattern: |
+          $VAL = request.args[$PARAM]
+          ...
+          $RESP.headers[$NAME] = $VAL
+      - pattern: |
+          $VAL = request.form[$PARAM]
+          ...
+          $RESP.headers[$NAME] = $VAL
+      - pattern: |
+          $VAL = request.form.get($PARAM)
+          ...
+          $RESP.headers[$NAME] = $VAL
+    metadata:
+      category: security
+      technology: [python]
+      cwe: ["CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # 4. Go – user input passed directly to response header
+  # ---------------------------------------------------------------------------
+  - id: manicode.header-injection.crlf-go-header-set
+    message: >-
+      User-controlled input from the HTTP request query string or form is passed
+      directly into a response header. An attacker can inject CRLF characters to
+      add arbitrary headers or split the HTTP response. Validate or sanitize the
+      value before setting it as a header.
+    severity: WARNING
+    languages: [go]
+    pattern-either:
+      - pattern: $W.Header().Set($NAME, $R.URL.Query().Get($PARAM))
+      - pattern: $W.Header().Add($NAME, $R.URL.Query().Get($PARAM))
+      - pattern: $W.Header().Set($NAME, $R.FormValue($PARAM))
+      - pattern: $W.Header().Add($NAME, $R.FormValue($PARAM))
+      - pattern: |
+          $VAL := $R.URL.Query().Get($PARAM)
+          ...
+          $W.Header().Set($NAME, $VAL)
+      - pattern: |
+          $VAL := $R.FormValue($PARAM)
+          ...
+          $W.Header().Set($NAME, $VAL)
+      - pattern: |
+          $VAL := $R.URL.Query().Get($PARAM)
+          ...
+          $W.Header().Add($NAME, $VAL)
+      - pattern: |
+          $VAL := $R.FormValue($PARAM)
+          ...
+          $W.Header().Add($NAME, $VAL)
+    metadata:
+      category: security
+      technology: [go]
+      cwe: ["CWE-113: Improper Neutralization of CRLF Sequences in HTTP Headers"]
+      confidence: HIGH
+
+  # ===========================================================================
+  # Host Header Injection
+  # ===========================================================================
+
+  # ---------------------------------------------------------------------------
+  # 5. Python – Host header used in URL construction or redirect
+  # ---------------------------------------------------------------------------
+  - id: manicode.header-injection.host-header-injection-python
+    message: >-
+      The Host header from the HTTP request is used in URL construction, string
+      formatting, or a redirect. An attacker can manipulate the Host header to
+      poison password-reset links, redirect users to malicious sites, or bypass
+      access controls. Use a server-side allowlist of trusted hostnames instead.
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - pattern: redirect("https://" + request.headers.get("Host") + ...)
+      - pattern: redirect("http://" + request.headers.get("Host") + ...)
+      - pattern: redirect(f"https://{request.headers.get('Host')}...")
+      - pattern: redirect(f"http://{request.headers.get('Host')}...")
+      - pattern: |
+          $HOST = request.headers.get("Host")
+          ...
+          redirect(f"https://{$HOST}...")
+      - pattern: |
+          $HOST = request.headers.get("Host")
+          ...
+          redirect(f"http://{$HOST}...")
+      - pattern: |
+          $HOST = request.headers.get("Host")
+          ...
+          $URL = "https://" + $HOST + ...
+      - pattern: |
+          $HOST = request.headers.get("Host")
+          ...
+          $URL = "http://" + $HOST + ...
+      - pattern: |
+          $HOST = request.META["HTTP_HOST"]
+          ...
+          redirect($URL)
+      - pattern: |
+          $HOST = request.META["HTTP_HOST"]
+          ...
+          $URL = "https://" + $HOST + ...
+      - pattern: |
+          $HOST = request.META["HTTP_HOST"]
+          ...
+          $URL = "http://" + $HOST + ...
+      - pattern: |
+          $HOST = request.META.get("HTTP_HOST")
+          ...
+          $URL = "https://" + $HOST + ...
+      - pattern: |
+          $HOST = request.META.get("HTTP_HOST")
+          ...
+          $URL = "http://" + $HOST + ...
+    metadata:
+      category: security
+      technology: [python]
+      cwe: ["CWE-644: Improper Neutralization of HTTP Headers for Scripting Syntax"]
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # 6. JavaScript – Host header used in URL construction or redirect
+  # ---------------------------------------------------------------------------
+  - id: manicode.header-injection.host-header-injection-javascript
+    message: >-
+      The Host header from the HTTP request is used in URL construction or a
+      redirect. An attacker can manipulate the Host header to poison password
+      reset links, redirect users to malicious sites, or bypass access controls.
+      Use a server-side allowlist of trusted hostnames instead.
+    severity: WARNING
+    languages: [javascript, typescript]
+    pattern-either:
+      - pattern: res.redirect("https://" + req.headers.host + ...)
+      - pattern: res.redirect("http://" + req.headers.host + ...)
+      - pattern: res.redirect(`https://${req.headers.host}...`)
+      - pattern: res.redirect(`http://${req.headers.host}...`)
+      - pattern: |
+          $HOST = req.headers.host;
+          ...
+          res.redirect("https://" + $HOST + ...);
+      - pattern: |
+          $HOST = req.headers.host;
+          ...
+          res.redirect("http://" + $HOST + ...);
+      - pattern: |
+          $HOST = req.get("host");
+          ...
+          res.redirect("https://" + $HOST + ...);
+      - pattern: |
+          $HOST = req.get("host");
+          ...
+          res.redirect("http://" + $HOST + ...);
+      - pattern: |
+          $HOST = req.headers.host;
+          ...
+          $URL = "https://" + $HOST + ...;
+      - pattern: |
+          $HOST = req.headers.host;
+          ...
+          $URL = "http://" + $HOST + ...;
+      - pattern: |
+          $HOST = req.get("host");
+          ...
+          $URL = "https://" + $HOST + ...;
+      - pattern: |
+          $HOST = req.get("host");
+          ...
+          $URL = "http://" + $HOST + ...;
+    metadata:
+      category: security
+      technology: [javascript, typescript]
+      cwe: ["CWE-644: Improper Neutralization of HTTP Headers for Scripting Syntax"]
+      confidence: MEDIUM
+
+  # ===========================================================================
+  # Open Redirect
+  # ===========================================================================
+
+  # ---------------------------------------------------------------------------
+  # 7. JavaScript (Node/Express) – open redirect via user input
+  # ---------------------------------------------------------------------------
+  - id: manicode.header-injection.open-redirect-node
+    message: >-
+      User-controlled input is passed directly to res.redirect() without
+      validation. An attacker can craft a URL that redirects the victim to a
+      malicious site, enabling phishing attacks. Validate the redirect target
+      against an allowlist of trusted destinations.
+    severity: ERROR
+    languages: [javascript, typescript]
+    pattern-either:
+      - pattern: res.redirect(req.query.$PARAM)
+      - pattern: res.redirect(req.body.$PARAM)
+      - pattern: res.redirect(req.params.$PARAM)
+      - pattern: |
+          $URL = req.query.$PARAM;
+          ...
+          res.redirect($URL);
+      - pattern: |
+          $URL = req.body.$PARAM;
+          ...
+          res.redirect($URL);
+      - pattern: |
+          $URL = req.params.$PARAM;
+          ...
+          res.redirect($URL);
+    metadata:
+      category: security
+      technology: [javascript, typescript]
+      cwe: ["CWE-601: URL Redirection to Untrusted Site ('Open Redirect')"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # 8. Java – open redirect via sendRedirect with user input
+  # ---------------------------------------------------------------------------
+  - id: manicode.header-injection.open-redirect-java
+    message: >-
+      User-controlled input from request.getParameter() is passed directly to
+      response.sendRedirect() without validation. An attacker can craft a URL
+      that redirects the victim to a malicious site, enabling phishing attacks.
+      Validate the redirect target against an allowlist of trusted destinations.
+    severity: ERROR
+    languages: [java]
+    pattern-either:
+      - pattern: $RESPONSE.sendRedirect($REQUEST.getParameter($PARAM))
+      - pattern: |
+          String $URL = $REQUEST.getParameter($PARAM);
+          ...
+          $RESPONSE.sendRedirect($URL);
+    metadata:
+      category: security
+      technology: [java]
+      cwe: ["CWE-601: URL Redirection to Untrusted Site ('Open Redirect')"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # 9. Python (Flask) – open redirect via user input
+  # ---------------------------------------------------------------------------
+  - id: manicode.header-injection.open-redirect-python
+    message: >-
+      User-controlled input from Flask request arguments or form data is passed
+      directly to redirect() without validation. An attacker can craft a URL
+      that redirects the victim to a malicious site, enabling phishing attacks.
+      Validate the redirect target against an allowlist of trusted destinations.
+    severity: ERROR
+    languages: [python]
+    pattern-either:
+      - pattern: redirect(request.args.get($PARAM))
+      - pattern: redirect(request.args[$PARAM])
+      - pattern: redirect(request.form[$PARAM])
+      - pattern: redirect(request.form.get($PARAM))
+      - pattern: |
+          $URL = request.args.get($PARAM)
+          ...
+          redirect($URL)
+      - pattern: |
+          $URL = request.args[$PARAM]
+          ...
+          redirect($URL)
+      - pattern: |
+          $URL = request.form[$PARAM]
+          ...
+          redirect($URL)
+      - pattern: |
+          $URL = request.form.get($PARAM)
+          ...
+          redirect($URL)
+    metadata:
+      category: security
+      technology: [python]
+      cwe: ["CWE-601: URL Redirection to Untrusted Site ('Open Redirect')"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # 10. Go – open redirect via user input
+  # ---------------------------------------------------------------------------
+  - id: manicode.header-injection.open-redirect-go
+    message: >-
+      User-controlled input from the HTTP request query string or form is passed
+      directly to http.Redirect() without validation. An attacker can craft a
+      URL that redirects the victim to a malicious site, enabling phishing
+      attacks. Validate the redirect target against an allowlist of trusted
+      destinations.
+    severity: ERROR
+    languages: [go]
+    pattern-either:
+      - pattern: http.Redirect($W, $R, $R.URL.Query().Get($PARAM), ...)
+      - pattern: http.Redirect($W, $R, $R.FormValue($PARAM), ...)
+      - pattern: |
+          $URL := $R.URL.Query().Get($PARAM)
+          ...
+          http.Redirect($W, $R, $URL, ...)
+      - pattern: |
+          $URL := $R.FormValue($PARAM)
+          ...
+          http.Redirect($W, $R, $URL, ...)
+    metadata:
+      category: security
+      technology: [go]
+      cwe: ["CWE-601: URL Redirection to Untrusted Site ('Open Redirect')"]
+      confidence: HIGH

@@ -1,0 +1,160 @@
+rules:
+  # ---------------------------------------------------------------------------
+  # JavaScript – fs.readFile / fs.readFileSync with request params
+  # ---------------------------------------------------------------------------
+  - id: manicode.file-ops.path-traversal-node-readfile
+    message: >-
+      User-controlled input from request parameters is passed directly to
+      fs.readFile or fs.readFileSync without path validation. An attacker can
+      use "../" sequences to read arbitrary files on the server. Use
+      path.resolve() and verify the result startsWith() an allowed base
+      directory.
+    severity: ERROR
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: fs.readFileSync(req.params.$PARAM, ...)
+          - pattern: fs.readFileSync(req.query.$PARAM, ...)
+          - pattern: fs.readFileSync(req.body.$PARAM, ...)
+          - pattern: fs.readFile(req.params.$PARAM, ...)
+          - pattern: fs.readFile(req.query.$PARAM, ...)
+          - pattern: fs.readFile(req.body.$PARAM, ...)
+          - pattern: fs.readFileSync(`...${req.params.$PARAM}...`, ...)
+          - pattern: fs.readFileSync(`...${req.query.$PARAM}...`, ...)
+          - pattern: fs.readFileSync(`...${req.body.$PARAM}...`, ...)
+          - pattern: fs.readFile(`...${req.params.$PARAM}...`, ...)
+          - pattern: fs.readFile(`...${req.query.$PARAM}...`, ...)
+          - pattern: fs.readFile(`...${req.body.$PARAM}...`, ...)
+          - pattern: fs.createReadStream(req.params.$PARAM, ...)
+          - pattern: fs.createReadStream(req.query.$PARAM, ...)
+          - pattern: fs.createReadStream(req.body.$PARAM, ...)
+    metadata:
+      category: security
+      technology: [javascript, typescript]
+      cwe: ["CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Python – open() with Flask/Django request input
+  # ---------------------------------------------------------------------------
+  - id: manicode.file-ops.path-traversal-python-open
+    message: >-
+      User input from a web request is passed directly to open(). An attacker
+      can use "../" sequences to read or write arbitrary files. Validate the
+      resolved path against an allowed base directory using os.path.realpath()
+      and startswith().
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: open(request.args.get(...), ...)
+          - pattern: open(request.args[$KEY], ...)
+          - pattern: open(request.form[$KEY], ...)
+          - pattern: open(request.form.get(...), ...)
+          - pattern: open(request.json[$KEY], ...)
+          - pattern: open(request.GET[$KEY], ...)
+          - pattern: open(request.GET.get(...), ...)
+          - pattern: open(request.POST[$KEY], ...)
+          - pattern: open(request.POST.get(...), ...)
+    metadata:
+      category: security
+      technology: [python]
+      cwe: ["CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Java – new File() or Paths.get() with request.getParameter()
+  # ---------------------------------------------------------------------------
+  - id: manicode.file-ops.path-traversal-java
+    message: >-
+      User input from request.getParameter() is passed directly to new File()
+      or Paths.get() without path validation. An attacker can use "../"
+      sequences to access files outside the intended directory. Canonicalize
+      the path and verify it starts with the allowed base directory.
+    severity: ERROR
+    languages: [java]
+    patterns:
+      - pattern-either:
+          - pattern: new File(request.getParameter(...))
+          - pattern: new File($DIR, request.getParameter(...))
+          - pattern: Paths.get(request.getParameter(...))
+          - pattern: Paths.get($DIR, request.getParameter(...))
+          - pattern: new java.io.File(request.getParameter(...))
+          - pattern: new java.io.File($DIR, request.getParameter(...))
+          - pattern: java.nio.file.Paths.get(request.getParameter(...))
+          - pattern: java.nio.file.Paths.get($DIR, request.getParameter(...))
+    metadata:
+      category: security
+      technology: [java]
+      cwe: ["CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Go – os.Open with r.FormValue or r.URL.Query without filepath.Clean
+  # ---------------------------------------------------------------------------
+  - id: manicode.file-ops.path-traversal-go
+    message: >-
+      User input from an HTTP request (FormValue, URL.Query) is passed to
+      os.Open, os.ReadFile, or os.Create without path validation. An attacker
+      can use "../" sequences to access arbitrary files. Use filepath.Clean()
+      and verify the resolved path is within the allowed base directory.
+    severity: ERROR
+    languages: [go]
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern: |
+                  $PATH := $R.FormValue(...)
+                  ...
+                  os.Open($PATH)
+          - patterns:
+              - pattern: |
+                  $PATH := $R.FormValue(...)
+                  ...
+                  os.ReadFile($PATH)
+          - patterns:
+              - pattern: |
+                  $PATH := $R.FormValue(...)
+                  ...
+                  os.Create($PATH)
+          - patterns:
+              - pattern: |
+                  $PATH := $R.FormValue(...)
+                  ...
+                  os.Open(filepath.Join(..., $PATH))
+          - patterns:
+              - pattern: |
+                  $PARAMS := $R.URL.Query()
+                  ...
+                  os.Open($PARAMS.Get(...))
+          - patterns:
+              - pattern: |
+                  $PARAMS := $R.URL.Query()
+                  ...
+                  os.ReadFile($PARAMS.Get(...))
+    metadata:
+      category: security
+      technology: [go]
+      cwe: ["CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # JavaScript – multer() without fileFilter (unsafe upload)
+  # ---------------------------------------------------------------------------
+  - id: manicode.file-ops.unsafe-upload-no-extension-check
+    message: >-
+      multer() is configured without a fileFilter option. Without fileFilter,
+      any file type can be uploaded, potentially including executable files or
+      files with path traversal in their names. Always configure fileFilter to
+      validate file extensions and MIME types.
+    severity: ERROR
+    languages: [javascript, typescript]
+    patterns:
+      - pattern: multer({...})
+      - pattern-not: "multer({...fileFilter: ..., ...})"
+      - pattern-not: "multer({..., fileFilter: ..., ...})"
+    metadata:
+      category: security
+      technology: [javascript, typescript]
+      cwe: ["CWE-23: Relative Path Traversal"]
+      confidence: MEDIUM
