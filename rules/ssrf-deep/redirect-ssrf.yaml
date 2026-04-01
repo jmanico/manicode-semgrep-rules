@@ -1,0 +1,331 @@
+rules:
+  # ---------------------------------------------------------------------------
+  # Python – HTTP client follows redirects on user-controlled URL
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.redirect-follow-user-url-python
+    message: >-
+      An HTTP request to a user-controlled URL is made with redirect following
+      enabled. An attacker can supply a URL that redirects to internal services
+      (e.g., cloud metadata at 169.254.169.254). Disable redirects or validate
+      the final destination.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern: requests.$METHOD($URL, ..., allow_redirects=True, ...)
+              - pattern-not: requests.$METHOD("...", ...)
+          - patterns:
+              - pattern: requests.$METHOD($URL, ...)
+              - pattern-not: requests.$METHOD("...", ...)
+              - pattern-not: requests.$METHOD($URL, ..., allow_redirects=False, ...)
+    metadata:
+      category: security
+      technology: [python]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: LOW
+
+  # ---------------------------------------------------------------------------
+  # Python – requests with explicit allow_redirects=True and user input
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.explicit-redirect-user-input-python
+    message: >-
+      HTTP request explicitly enables redirect following (allow_redirects=True)
+      with a URL sourced from user input. An attacker can redirect the request
+      to internal services. Set allow_redirects=False and validate destinations.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern: |
+                  $URL = request.args[$KEY]
+                  ...
+                  requests.$METHOD($URL, ..., allow_redirects=True, ...)
+          - patterns:
+              - pattern: |
+                  $URL = request.args.get(...)
+                  ...
+                  requests.$METHOD($URL, ..., allow_redirects=True, ...)
+          - patterns:
+              - pattern: |
+                  $URL = request.form[$KEY]
+                  ...
+                  requests.$METHOD($URL, ..., allow_redirects=True, ...)
+          - patterns:
+              - pattern: |
+                  $URL = request.json[$KEY]
+                  ...
+                  requests.$METHOD($URL, ..., allow_redirects=True, ...)
+          - patterns:
+              - pattern: |
+                  $URL = request.args[$KEY]
+                  ...
+                  requests.$METHOD($URL, ...)
+              - pattern-not: |
+                  $URL = request.args[$KEY]
+                  ...
+                  requests.$METHOD($URL, ..., allow_redirects=False, ...)
+          - patterns:
+              - pattern: |
+                  $URL = request.args.get(...)
+                  ...
+                  requests.$METHOD($URL, ...)
+              - pattern-not: |
+                  $URL = request.args.get(...)
+                  ...
+                  requests.$METHOD($URL, ..., allow_redirects=False, ...)
+          - patterns:
+              - pattern: |
+                  $URL = request.form[$KEY]
+                  ...
+                  requests.$METHOD($URL, ...)
+              - pattern-not: |
+                  $URL = request.form[$KEY]
+                  ...
+                  requests.$METHOD($URL, ..., allow_redirects=False, ...)
+          - patterns:
+              - pattern: |
+                  $URL = request.json[$KEY]
+                  ...
+                  requests.$METHOD($URL, ...)
+              - pattern-not: |
+                  $URL = request.json[$KEY]
+                  ...
+                  requests.$METHOD($URL, ..., allow_redirects=False, ...)
+    metadata:
+      category: security
+      technology: [python]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Python – webhook/callback URL handler follows redirects
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.webhook-callback-redirect-python
+    message: >-
+      A webhook or callback URL from a request is fetched without disabling
+      redirects. An attacker can register a webhook URL that redirects to
+      internal services. Disable redirect following and validate the URL.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern: |
+                  $URL = $DATA["callback_url"]
+                  ...
+                  requests.$METHOD($URL, ...)
+              - pattern-not: |
+                  $URL = $DATA["callback_url"]
+                  ...
+                  requests.$METHOD($URL, ..., allow_redirects=False, ...)
+          - patterns:
+              - pattern: |
+                  $URL = $DATA["webhook_url"]
+                  ...
+                  requests.$METHOD($URL, ...)
+              - pattern-not: |
+                  $URL = $DATA["webhook_url"]
+                  ...
+                  requests.$METHOD($URL, ..., allow_redirects=False, ...)
+          - patterns:
+              - pattern: |
+                  $URL = $DATA["webhook"]
+                  ...
+                  requests.$METHOD($URL, ...)
+              - pattern-not: |
+                  $URL = $DATA["webhook"]
+                  ...
+                  requests.$METHOD($URL, ..., allow_redirects=False, ...)
+          - patterns:
+              - pattern: |
+                  $URL = $DATA["callback"]
+                  ...
+                  requests.$METHOD($URL, ...)
+              - pattern-not: |
+                  $URL = $DATA["callback"]
+                  ...
+                  requests.$METHOD($URL, ..., allow_redirects=False, ...)
+          - patterns:
+              - pattern: |
+                  $URL = $DATA.get("callback_url")
+                  ...
+                  requests.$METHOD($URL, ...)
+              - pattern-not: |
+                  $URL = $DATA.get("callback_url")
+                  ...
+                  requests.$METHOD($URL, ..., allow_redirects=False, ...)
+          - patterns:
+              - pattern: |
+                  $URL = $DATA.get("webhook_url")
+                  ...
+                  requests.$METHOD($URL, ...)
+              - pattern-not: |
+                  $URL = $DATA.get("webhook_url")
+                  ...
+                  requests.$METHOD($URL, ..., allow_redirects=False, ...)
+    metadata:
+      category: security
+      technology: [python]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # JavaScript – axios follows redirects on user-controlled URL
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.redirect-follow-user-url-javascript
+    message: >-
+      An HTTP request to a user-controlled URL is made with redirect following
+      enabled. Axios follows redirects by default. An attacker can supply a URL
+      that redirects to internal services. Set maxRedirects to 0 or validate
+      the final destination.
+    severity: WARNING
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern: |
+                  $URL = req.query.$PARAM;
+                  ...
+                  axios.get($URL, ...);
+              - pattern-not: |
+                  $URL = req.query.$PARAM;
+                  ...
+                  axios.get($URL, { ..., maxRedirects: 0, ... });
+          - patterns:
+              - pattern: |
+                  $URL = req.body.$PARAM;
+                  ...
+                  axios.get($URL, ...);
+              - pattern-not: |
+                  $URL = req.body.$PARAM;
+                  ...
+                  axios.get($URL, { ..., maxRedirects: 0, ... });
+          - patterns:
+              - pattern: |
+                  $URL = req.params.$PARAM;
+                  ...
+                  axios.get($URL, ...);
+              - pattern-not: |
+                  $URL = req.params.$PARAM;
+                  ...
+                  axios.get($URL, { ..., maxRedirects: 0, ... });
+    metadata:
+      category: security
+      technology: [javascript, typescript]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # JavaScript – fetch with redirect:follow on user-controlled URL
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.fetch-redirect-follow-javascript
+    message: >-
+      fetch() is called with redirect set to "follow" on a user-controlled URL.
+      An attacker can supply a URL that redirects to internal services. Use
+      redirect "manual" or "error" and validate the destination.
+    severity: ERROR
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern: |
+                  $URL = req.query.$PARAM;
+                  ...
+                  fetch($URL, { ..., redirect: "follow", ... });
+          - patterns:
+              - pattern: |
+                  $URL = req.body.$PARAM;
+                  ...
+                  fetch($URL, { ..., redirect: "follow", ... });
+          - patterns:
+              - pattern: |
+                  $URL = req.params.$PARAM;
+                  ...
+                  fetch($URL, { ..., redirect: "follow", ... });
+    metadata:
+      category: security
+      technology: [javascript, typescript]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # JavaScript – webhook/callback URL handler follows redirects
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.webhook-callback-redirect-javascript
+    message: >-
+      A webhook or callback URL from request data is fetched without disabling
+      redirects. An attacker can register a webhook URL that redirects to
+      internal services. Disable redirect following and validate the URL.
+    severity: ERROR
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern: |
+                  $URL = $DATA.callback_url;
+                  ...
+                  axios.get($URL, ...);
+              - pattern-not: |
+                  $URL = $DATA.callback_url;
+                  ...
+                  axios.get($URL, { ..., maxRedirects: 0, ... });
+          - patterns:
+              - pattern: |
+                  $URL = $DATA.webhook_url;
+                  ...
+                  axios.get($URL, ...);
+              - pattern-not: |
+                  $URL = $DATA.webhook_url;
+                  ...
+                  axios.get($URL, { ..., maxRedirects: 0, ... });
+          - patterns:
+              - pattern: |
+                  $URL = $DATA.callbackUrl;
+                  ...
+                  axios.get($URL, ...);
+              - pattern-not: |
+                  $URL = $DATA.callbackUrl;
+                  ...
+                  axios.get($URL, { ..., maxRedirects: 0, ... });
+          - patterns:
+              - pattern: |
+                  $URL = $DATA.webhookUrl;
+                  ...
+                  axios.get($URL, ...);
+              - pattern-not: |
+                  $URL = $DATA.webhookUrl;
+                  ...
+                  axios.get($URL, { ..., maxRedirects: 0, ... });
+          - patterns:
+              - pattern: |
+                  $URL = req.body.callback_url;
+                  ...
+                  fetch($URL, ...);
+              - pattern-not: |
+                  $URL = req.body.callback_url;
+                  ...
+                  fetch($URL, { ..., redirect: "error", ... });
+              - pattern-not: |
+                  $URL = req.body.callback_url;
+                  ...
+                  fetch($URL, { ..., redirect: "manual", ... });
+          - patterns:
+              - pattern: |
+                  $URL = req.body.webhook_url;
+                  ...
+                  fetch($URL, ...);
+              - pattern-not: |
+                  $URL = req.body.webhook_url;
+                  ...
+                  fetch($URL, { ..., redirect: "error", ... });
+              - pattern-not: |
+                  $URL = req.body.webhook_url;
+                  ...
+                  fetch($URL, { ..., redirect: "manual", ... });
+    metadata:
+      category: security
+      technology: [javascript, typescript]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: HIGH

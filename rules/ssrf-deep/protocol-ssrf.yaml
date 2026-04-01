@@ -1,0 +1,209 @@
+rules:
+  # ---------------------------------------------------------------------------
+  # Python – dangerous protocol schemes in HTTP client calls
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.dangerous-protocol-scheme-python
+    message: >-
+      A URL with a dangerous protocol scheme (file://, gopher://, or dict://)
+      is passed to an HTTP client. These protocols can be abused for SSRF to
+      read local files, interact with internal services, or bypass firewalls.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: requests.$METHOD("=~/^(file|gopher|dict):\/\/.*/", ...)
+          - pattern: httpx.$METHOD("=~/^(file|gopher|dict):\/\/.*/", ...)
+          - pattern: urllib.request.urlopen("=~/^(file|gopher|dict):\/\/.*/", ...)
+          - pattern: urllib.request.Request("=~/^(file|gopher|dict):\/\/.*/", ...)
+    metadata:
+      category: security
+      technology: [python]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Python – variable with dangerous scheme passed to HTTP client
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.dangerous-protocol-variable-python
+    message: >-
+      A URL variable containing a dangerous protocol scheme (file://, gopher://,
+      dict://) is passed to an HTTP client. Validate URL schemes before making
+      requests.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern: |
+                  $URL = "=~/^(file|gopher|dict):\/\/.*/"
+                  ...
+                  requests.$METHOD($URL, ...)
+          - patterns:
+              - pattern: |
+                  $URL = "=~/^(file|gopher|dict):\/\/.*/"
+                  ...
+                  httpx.$METHOD($URL, ...)
+          - patterns:
+              - pattern: |
+                  $URL = "=~/^(file|gopher|dict):\/\/.*/"
+                  ...
+                  urllib.request.urlopen($URL, ...)
+    metadata:
+      category: security
+      technology: [python]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # Python – URL from user input without scheme validation
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.no-scheme-validation-python
+    message: >-
+      User-supplied URL is passed to an HTTP client without validating the
+      scheme. An attacker could use file://, gopher://, or other dangerous
+      protocols to perform SSRF. Validate that the URL scheme is http:// or
+      https:// before making the request.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern: requests.$METHOD(request.$PARAM[$KEY], ...)
+          - patterns:
+              - pattern: requests.$METHOD(request.args.get(...), ...)
+          - patterns:
+              - pattern: requests.$METHOD(request.form[$KEY], ...)
+          - patterns:
+              - pattern: requests.$METHOD(request.json[$KEY], ...)
+      - pattern-not-inside: |
+          if $URL.startswith("http://") or $URL.startswith("https://"):
+              ...
+      - pattern-not-inside: |
+          $PARSED = urllib.parse.urlparse(...)
+          ...
+    metadata:
+      category: security
+      technology: [python]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # JavaScript – dangerous protocol schemes in HTTP client calls
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.dangerous-protocol-scheme-javascript
+    message: >-
+      A URL with a dangerous protocol scheme (file://, gopher://, or dict://)
+      is passed to an HTTP client. These protocols can be abused for SSRF to
+      read local files, interact with internal services, or bypass firewalls.
+    severity: ERROR
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: fetch("=~/^(file|gopher|dict):\/\/.*/", ...)
+          - pattern: axios.get("=~/^(file|gopher|dict):\/\/.*/", ...)
+          - pattern: axios.post("=~/^(file|gopher|dict):\/\/.*/", ...)
+          - pattern: axios("=~/^(file|gopher|dict):\/\/.*/", ...)
+          - pattern: http.get("=~/^(file|gopher|dict):\/\/.*/", ...)
+          - pattern: http.request("=~/^(file|gopher|dict):\/\/.*/", ...)
+          - pattern: https.get("=~/^(file|gopher|dict):\/\/.*/", ...)
+          - pattern: https.request("=~/^(file|gopher|dict):\/\/.*/", ...)
+    metadata:
+      category: security
+      technology: [javascript, typescript]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # JavaScript – variable with dangerous scheme passed to HTTP client
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.dangerous-protocol-variable-javascript
+    message: >-
+      A URL variable containing a dangerous protocol scheme (file://, gopher://,
+      dict://) is passed to an HTTP client. Validate URL schemes before making
+      requests.
+    severity: WARNING
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern: |
+                  $URL = "=~/^(file|gopher|dict):\/\/.*/";
+                  ...
+                  fetch($URL, ...);
+          - patterns:
+              - pattern: |
+                  $URL = "=~/^(file|gopher|dict):\/\/.*/";
+                  ...
+                  axios.get($URL, ...);
+          - patterns:
+              - pattern: |
+                  $URL = "=~/^(file|gopher|dict):\/\/.*/";
+                  ...
+                  axios($URL, ...);
+    metadata:
+      category: security
+      technology: [javascript, typescript]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # Java – dangerous protocol schemes in HTTP client calls
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.dangerous-protocol-scheme-java
+    message: >-
+      A URL with a dangerous protocol scheme (file://, gopher://, or dict://)
+      is used with a Java HTTP client. These protocols can be abused for SSRF
+      to read local files or interact with internal services.
+    severity: ERROR
+    languages: [java]
+    patterns:
+      - pattern-either:
+          - pattern: new URL("=~/^(file|gopher|dict):\/\/.*/").openConnection(...)
+          - pattern: new java.net.URL("=~/^(file|gopher|dict):\/\/.*/").openConnection(...)
+          - pattern: URI.create("=~/^(file|gopher|dict):\/\/.*/")
+          - pattern: java.net.URI.create("=~/^(file|gopher|dict):\/\/.*/")
+          - pattern: new URL("=~/^(file|gopher|dict):\/\/.*/").openStream(...)
+          - pattern: new java.net.URL("=~/^(file|gopher|dict):\/\/.*/").openStream(...)
+    metadata:
+      category: security
+      technology: [java]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Java – user input URL without scheme validation
+  # ---------------------------------------------------------------------------
+  - id: manicode.ssrf.no-scheme-validation-java
+    message: >-
+      User-controlled URL is used to create a connection without validating the
+      protocol scheme. An attacker can use file://, gopher://, or other dangerous
+      protocols. Validate that the scheme is http or https.
+    severity: WARNING
+    languages: [java]
+    patterns:
+      - pattern-either:
+          - patterns:
+              - pattern: |
+                  $URL = (String) $REQ.getParameter(...);
+                  ...
+                  new URL($URL).openConnection(...);
+          - patterns:
+              - pattern: |
+                  $URL = $REQ.getParameter(...);
+                  ...
+                  new URL($URL).openConnection(...);
+          - patterns:
+              - pattern: |
+                  $URL = (String) $REQ.getParameter(...);
+                  ...
+                  URI.create($URL);
+          - patterns:
+              - pattern: |
+                  $URL = $REQ.getParameter(...);
+                  ...
+                  URI.create($URL);
+    metadata:
+      category: security
+      technology: [java]
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      confidence: MEDIUM

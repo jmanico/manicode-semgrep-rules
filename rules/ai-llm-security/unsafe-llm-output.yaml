@@ -1,0 +1,271 @@
+rules:
+  # ---------------------------------------------------------------
+  # 1. LLM output passed to eval/exec — Python (RCE)
+  # ---------------------------------------------------------------
+  - id: manicode.unsafe-llm-output.eval-exec-python
+    languages: [python]
+    severity: ERROR
+    message: >-
+      LLM output is passed to eval() or exec(), enabling remote code
+      execution. An attacker who controls or influences the LLM response
+      (via prompt injection or poisoned training data) can execute arbitrary
+      code on the server. Never pass LLM output to code execution functions.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code ('Eval Injection')"
+      confidence: HIGH
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    pattern-either:
+      - pattern: |
+          $RESPONSE = $CLIENT.chat.completions.create(...)
+          ...
+          eval($RESPONSE. ...)
+      - pattern: |
+          $RESPONSE = $CLIENT.chat.completions.create(...)
+          ...
+          exec($RESPONSE. ...)
+      - pattern: |
+          $RESPONSE = $CLIENT.messages.create(...)
+          ...
+          eval($RESPONSE. ...)
+      - pattern: |
+          $RESPONSE = $CLIENT.messages.create(...)
+          ...
+          exec($RESPONSE. ...)
+      - pattern: |
+          $CONTENT = $RESPONSE.choices[0].message.content
+          ...
+          eval($CONTENT)
+      - pattern: |
+          $CONTENT = $RESPONSE.choices[0].message.content
+          ...
+          exec($CONTENT)
+      - pattern: |
+          eval($RESPONSE.choices[0].message.content)
+      - pattern: |
+          exec($RESPONSE.choices[0].message.content)
+
+  # ---------------------------------------------------------------
+  # 2. LLM output passed to subprocess/os.system — Python (RCE)
+  # ---------------------------------------------------------------
+  - id: manicode.unsafe-llm-output.subprocess-python
+    languages: [python]
+    severity: ERROR
+    message: >-
+      LLM output is passed to subprocess or os.system(), enabling command
+      injection. An attacker who influences the LLM response can execute
+      arbitrary system commands. Never pass LLM output to shell execution
+      functions.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+      confidence: HIGH
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    pattern-either:
+      - pattern: |
+          $CONTENT = $RESPONSE.choices[0].message.content
+          ...
+          subprocess.run($CONTENT, ...)
+      - pattern: |
+          $CONTENT = $RESPONSE.choices[0].message.content
+          ...
+          subprocess.call($CONTENT, ...)
+      - pattern: |
+          $CONTENT = $RESPONSE.choices[0].message.content
+          ...
+          subprocess.Popen($CONTENT, ...)
+      - pattern: |
+          $CONTENT = $RESPONSE.choices[0].message.content
+          ...
+          os.system($CONTENT)
+      - pattern: |
+          $CONTENT = $RESPONSE.choices[0].message.content
+          ...
+          os.popen($CONTENT)
+      - pattern: |
+          subprocess.run($RESPONSE.choices[0].message.content, ...)
+      - pattern: |
+          os.system($RESPONSE.choices[0].message.content)
+
+  # ---------------------------------------------------------------
+  # 3. LLM output in SQL queries — Python (SQLi)
+  # ---------------------------------------------------------------
+  - id: manicode.unsafe-llm-output.sql-injection-python
+    languages: [python]
+    severity: ERROR
+    message: >-
+      LLM output is interpolated into a SQL query string, enabling SQL
+      injection. If an attacker can influence the LLM response through prompt
+      injection, they can manipulate database queries. Always use
+      parameterized queries.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"
+      confidence: HIGH
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    pattern-either:
+      - pattern: |
+          $CONTENT = $RESPONSE.choices[0].message.content
+          ...
+          $CURSOR.execute(f"...{$CONTENT}...")
+      - pattern: |
+          $CONTENT = $RESPONSE.choices[0].message.content
+          ...
+          $CURSOR.execute("..." + $CONTENT + "...")
+      - pattern: |
+          $CONTENT = $RESPONSE.choices[0].message.content
+          ...
+          $CURSOR.execute("...%s..." % $CONTENT)
+      - pattern: |
+          $CONTENT = $RESPONSE.choices[0].message.content
+          ...
+          $CURSOR.execute("...".format($CONTENT))
+      - pattern: |
+          $CURSOR.execute(f"...{$RESPONSE.choices[0].message.content}...")
+
+  # ---------------------------------------------------------------
+  # 4. LLM output rendered as HTML — Python (XSS)
+  # ---------------------------------------------------------------
+  - id: manicode.unsafe-llm-output.html-rendering-python
+    languages: [python]
+    severity: WARNING
+    message: >-
+      LLM output is rendered as raw HTML using Markup() or rendered without
+      escaping. If an attacker can influence the LLM response, they can
+      inject malicious scripts (XSS). Always escape LLM output before
+      rendering as HTML.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
+      confidence: MEDIUM
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    pattern-either:
+      - pattern: |
+          $CONTENT = $RESPONSE.choices[0].message.content
+          ...
+          Markup($CONTENT)
+      - pattern: |
+          $CONTENT = $RESPONSE.choices[0].message.content
+          ...
+          render_template_string($CONTENT)
+      - pattern: |
+          render_template_string($RESPONSE.choices[0].message.content)
+
+  # ---------------------------------------------------------------
+  # 5. LLM output passed to eval — JavaScript (RCE)
+  # ---------------------------------------------------------------
+  - id: manicode.unsafe-llm-output.eval-javascript
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      LLM output is passed to eval() or Function(), enabling remote code
+      execution. An attacker who influences the LLM response can execute
+      arbitrary code. Never pass LLM output to code execution functions.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code ('Eval Injection')"
+      confidence: HIGH
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    pattern-either:
+      - pattern: |
+          $RESPONSE = await $CLIENT.chat.completions.create(...)
+          ...
+          eval($RESPONSE. ...)
+      - pattern: |
+          $CONTENT = $RESPONSE.choices[0].message.content
+          ...
+          eval($CONTENT)
+      - pattern: |
+          eval($RESPONSE.choices[0].message.content)
+      - pattern: |
+          $CONTENT = $RESPONSE.choices[0].message.content
+          ...
+          new Function($CONTENT)
+      - pattern: |
+          new Function($RESPONSE.choices[0].message.content)
+
+  # ---------------------------------------------------------------
+  # 6. LLM output passed to shell — JavaScript (RCE)
+  # ---------------------------------------------------------------
+  - id: manicode.unsafe-llm-output.shell-javascript
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      LLM output is passed to a shell execution function (exec, execSync,
+      spawn), enabling command injection. Never pass LLM output to shell
+      commands.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+      confidence: HIGH
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    pattern-either:
+      - pattern: |
+          $CONTENT = $RESPONSE.choices[0].message.content
+          ...
+          exec($CONTENT, ...)
+      - pattern: |
+          $CONTENT = $RESPONSE.choices[0].message.content
+          ...
+          execSync($CONTENT, ...)
+      - pattern: |
+          exec($RESPONSE.choices[0].message.content, ...)
+      - pattern: |
+          execSync($RESPONSE.choices[0].message.content, ...)
+
+  # ---------------------------------------------------------------
+  # 7. LLM output rendered as HTML — JavaScript (XSS)
+  # ---------------------------------------------------------------
+  - id: manicode.unsafe-llm-output.html-rendering-javascript
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      LLM output is inserted as raw HTML via innerHTML or dangerouslySetInnerHTML.
+      If an attacker can influence the LLM response, they can inject scripts
+      (XSS). Escape or sanitize LLM output before rendering as HTML.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
+      confidence: MEDIUM
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    pattern-either:
+      - pattern: |
+          $CONTENT = $RESPONSE.choices[0].message.content
+          ...
+          $EL.innerHTML = $CONTENT
+      - pattern: |
+          $EL.innerHTML = $RESPONSE.choices[0].message.content
+      - pattern: |
+          <$TAG dangerouslySetInnerHTML={{__html: $RESPONSE.choices[0].message.content}} />
+      - pattern: |
+          $CONTENT = $RESPONSE.choices[0].message.content
+          ...
+          <$TAG dangerouslySetInnerHTML={{__html: $CONTENT}} />

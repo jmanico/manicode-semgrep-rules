@@ -1,0 +1,236 @@
+rules:
+  # ---------------------------------------------------------------
+  # 1. Documents loaded from URLs without validation — LangChain
+  # ---------------------------------------------------------------
+  - id: manicode.rag-security.unvalidated-url-document-loader
+    languages: [python]
+    severity: WARNING
+    message: >-
+      A document is loaded from a URL or user-supplied path and fed directly
+      into a vector store without validation or sanitization. An attacker
+      could supply a malicious URL pointing to crafted documents that poison
+      the RAG knowledge base with adversarial content, enabling indirect
+      prompt injection. Validate URLs against an allowlist and sanitize
+      document content before indexing.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-20: Improper Input Validation"
+      confidence: MEDIUM
+      technology:
+        - langchain
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    pattern-either:
+      - pattern: |
+          $LOADER = WebBaseLoader($URL)
+          ...
+          $DOCS = $LOADER.load()
+          ...
+          $VECTORSTORE.add_documents($DOCS)
+      - pattern: |
+          $LOADER = WebBaseLoader($URL)
+          ...
+          $DOCS = $LOADER.load()
+          ...
+          $VECTORSTORE.from_documents($DOCS, ...)
+      - pattern: |
+          $LOADER = UnstructuredURLLoader($URLS)
+          ...
+          $DOCS = $LOADER.load()
+          ...
+          $VECTORSTORE.add_documents($DOCS)
+      - pattern: |
+          $LOADER = UnstructuredURLLoader($URLS)
+          ...
+          $DOCS = $LOADER.load()
+          ...
+          $VECTORSTORE.from_documents($DOCS, ...)
+      - pattern: |
+          $LOADER = OnlinePDFLoader($URL)
+          ...
+          $DOCS = $LOADER.load()
+          ...
+          $VECTORSTORE.add_documents($DOCS)
+      - pattern: |
+          $LOADER = SeleniumURLLoader($URLS)
+          ...
+          $DOCS = $LOADER.load()
+          ...
+          $VECTORSTORE.from_documents($DOCS, ...)
+
+  - id: manicode.rag-security.unvalidated-file-loader
+    languages: [python]
+    severity: WARNING
+    message: >-
+      A document is loaded from a user-supplied file path and added to a
+      vector store without validation. An attacker could supply a path to a
+      sensitive file (path traversal) or a crafted document that poisons the
+      knowledge base. Validate file paths against an allowlist and sanitize
+      content before indexing.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"
+      confidence: MEDIUM
+      technology:
+        - langchain
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    pattern-either:
+      - pattern: |
+          $LOADER = DirectoryLoader($USER_PATH, ...)
+          ...
+          $DOCS = $LOADER.load()
+          ...
+          $VECTORSTORE.add_documents($DOCS)
+      - pattern: |
+          $LOADER = DirectoryLoader($USER_PATH, ...)
+          ...
+          $DOCS = $LOADER.load()
+          ...
+          $VECTORSTORE.from_documents($DOCS, ...)
+      - pattern: |
+          $LOADER = TextLoader($USER_PATH)
+          ...
+          $DOCS = $LOADER.load()
+          ...
+          $VECTORSTORE.add_documents($DOCS)
+      - pattern: |
+          $LOADER = PyPDFLoader($USER_PATH)
+          ...
+          $DOCS = $LOADER.load()
+          ...
+          $VECTORSTORE.add_documents($DOCS)
+
+  # ---------------------------------------------------------------
+  # 2. LlamaIndex — unvalidated document ingestion
+  # ---------------------------------------------------------------
+  - id: manicode.rag-security.llamaindex-unvalidated-loader
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Documents are loaded from a user-supplied path using LlamaIndex
+      SimpleDirectoryReader and indexed without validation. Validate and
+      sanitize document sources before ingestion to prevent knowledge base
+      poisoning and path traversal attacks.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-20: Improper Input Validation"
+      confidence: MEDIUM
+      technology:
+        - llamaindex
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    pattern-either:
+      - pattern: |
+          $READER = SimpleDirectoryReader($USER_PATH)
+          ...
+          $DOCS = $READER.load_data()
+          ...
+          VectorStoreIndex.from_documents($DOCS, ...)
+      - pattern: |
+          $DOCS = SimpleDirectoryReader($USER_PATH).load_data()
+          ...
+          VectorStoreIndex.from_documents($DOCS, ...)
+      - pattern: |
+          $READER = SimpleDirectoryReader(input_dir=$USER_PATH)
+          ...
+          $INDEX = VectorStoreIndex.from_documents($READER.load_data(), ...)
+
+  # ---------------------------------------------------------------
+  # 3. ChromaDB queries without tenant/user filtering
+  # ---------------------------------------------------------------
+  - id: manicode.rag-security.chromadb-no-tenant-filter
+    languages: [python]
+    severity: WARNING
+    message: >-
+      ChromaDB collection query does not include a 'where' filter for
+      tenant or user isolation. In multi-tenant RAG applications, failing
+      to filter by tenant/user allows one user to retrieve another user's
+      documents. Add a where clause to filter by user_id or tenant_id.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-284: Improper Access Control"
+      confidence: LOW
+      technology:
+        - chromadb
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    patterns:
+      - pattern: |
+          $COLLECTION.query(query_texts=$QUERY, ...)
+      - pattern-not: |
+          $COLLECTION.query(query_texts=$QUERY, ..., where={...}, ...)
+      - pattern-not: |
+          $COLLECTION.query(query_texts=$QUERY, ..., where=$WHERE, ...)
+
+  # ---------------------------------------------------------------
+  # 4. Pinecone queries without metadata filtering
+  # ---------------------------------------------------------------
+  - id: manicode.rag-security.pinecone-no-tenant-filter
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Pinecone query does not include a metadata filter for tenant or user
+      isolation. In multi-tenant RAG applications, failing to filter by
+      tenant/user allows cross-tenant data access. Add a filter parameter
+      with user_id or tenant_id constraints.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-284: Improper Access Control"
+      confidence: LOW
+      technology:
+        - pinecone
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    patterns:
+      - pattern: |
+          $INDEX.query(vector=$VEC, ...)
+      - pattern-not: |
+          $INDEX.query(vector=$VEC, ..., filter={...}, ...)
+      - pattern-not: |
+          $INDEX.query(vector=$VEC, ..., filter=$FILTER, ...)
+
+  # ---------------------------------------------------------------
+  # 5. Weaviate queries without tenant filtering
+  # ---------------------------------------------------------------
+  - id: manicode.rag-security.weaviate-no-tenant-filter
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Weaviate query does not include tenant filtering. In multi-tenant RAG
+      applications, queries without tenant isolation allow cross-tenant data
+      access. Use Weaviate's multi-tenancy features or add explicit tenant
+      filters to queries.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-284: Improper Access Control"
+      confidence: LOW
+      technology:
+        - weaviate
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    patterns:
+      - pattern: |
+          $CLIENT.query.get($CLASS, ...).with_near_text($QUERY).do()
+      - pattern-not: |
+          $CLIENT.query.get($CLASS, ...).with_near_text($QUERY).with_where(...).do()
+      - pattern-not: |
+          $CLIENT.query.get($CLASS, ...).with_near_text($QUERY).with_tenant(...).do()

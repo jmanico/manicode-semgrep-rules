@@ -1,0 +1,214 @@
+rules:
+  # ----------------------------------------------------------------
+  # ECB mode detection
+  # ----------------------------------------------------------------
+  - id: manicode.crypto.ecb-mode-python
+    message: >-
+      AES ECB mode detected. ECB does not provide semantic security —
+      identical plaintext blocks produce identical ciphertext blocks,
+      leaking patterns. Use AES-GCM or AES-CBC with HMAC instead.
+    severity: ERROR
+    languages:
+      - python
+    pattern: AES.new(..., AES.MODE_ECB, ...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-327: Use of a Broken or Risky Cryptographic Algorithm"
+      confidence: HIGH
+
+  - id: manicode.crypto.ecb-mode-java
+    message: >-
+      AES ECB mode detected. ECB does not provide semantic security —
+      identical plaintext blocks produce identical ciphertext blocks,
+      leaking patterns. Use AES/GCM/NoPadding instead.
+    severity: ERROR
+    languages:
+      - java
+    pattern: Cipher.getInstance("AES/ECB/...")
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-327: Use of a Broken or Risky Cryptographic Algorithm"
+      confidence: HIGH
+
+  - id: manicode.crypto.ecb-mode-javascript
+    message: >-
+      AES ECB mode detected in createCipheriv. ECB does not provide
+      semantic security — identical plaintext blocks produce identical
+      ciphertext blocks. Use aes-256-gcm instead.
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    pattern-regex: "createCipheriv\\(['\"]aes-\\d+-ecb['\"]"
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-327: Use of a Broken or Risky Cryptographic Algorithm"
+      confidence: HIGH
+
+  - id: manicode.crypto.no-gcm-go
+    message: >-
+      AES block cipher created without GCM mode. Using AES without an
+      authenticated mode (GCM) risks confidentiality and integrity failures.
+      Wrap the block cipher with cipher.NewGCM().
+    severity: WARNING
+    languages:
+      - go
+    patterns:
+      - pattern: |
+          $BLOCK, $ERR := aes.NewCipher(...)
+          ...
+          cipher.NewCBCEncrypter($BLOCK, ...)
+      - pattern-not: |
+          $BLOCK, $ERR := aes.NewCipher(...)
+          ...
+          cipher.NewGCM($BLOCK)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-327: Use of a Broken or Risky Cryptographic Algorithm"
+      confidence: MEDIUM
+
+  # ----------------------------------------------------------------
+  # Static / hardcoded IVs
+  # ----------------------------------------------------------------
+  - id: manicode.crypto.static-iv-python
+    message: >-
+      Hardcoded initialization vector (IV) detected. A static IV
+      destroys the semantic security of CBC and CTR modes. Generate
+      a random IV with os.urandom() for every encryption operation.
+    severity: ERROR
+    languages:
+      - python
+    pattern-either:
+      - pattern: |
+          $IV = b"..."
+          ...
+          AES.new(..., iv=$IV, ...)
+      - pattern: |
+          $IV = b"..."
+          ...
+          AES.new(..., IV=$IV, ...)
+      - pattern: |
+          $IV = bytes([...])
+          ...
+          AES.new(..., iv=$IV, ...)
+      - pattern: |
+          $IV = bytes([...])
+          ...
+          AES.new(..., IV=$IV, ...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-329: Generation of Predictable IV with CBC Mode"
+      confidence: HIGH
+
+  - id: manicode.crypto.static-iv-javascript
+    message: >-
+      Hardcoded initialization vector (IV) detected. A static IV
+      destroys the semantic security of block cipher modes. Generate
+      a random IV with crypto.randomBytes() for every encryption.
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    pattern-either:
+      - pattern: |
+          $IV = Buffer.from("...", ...);
+          ...
+          createCipheriv(..., $IV);
+      - pattern: |
+          const $IV = Buffer.from("...", ...);
+          ...
+          createCipheriv(..., $IV);
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-329: Generation of Predictable IV with CBC Mode"
+      confidence: HIGH
+
+  - id: manicode.crypto.static-iv-java
+    message: >-
+      Hardcoded initialization vector (IV) detected. A static IV
+      destroys the semantic security of block cipher modes. Generate
+      a random IV with SecureRandom for every encryption operation.
+    severity: ERROR
+    languages:
+      - java
+    pattern: |
+      byte[] $IV = {... };
+      ...
+      new IvParameterSpec($IV);
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-329: Generation of Predictable IV with CBC Mode"
+      confidence: HIGH
+
+  # ----------------------------------------------------------------
+  # CBC without authentication
+  # ----------------------------------------------------------------
+  - id: manicode.crypto.cbc-without-hmac-python
+    message: >-
+      AES-CBC used without an accompanying HMAC. CBC mode is malleable;
+      without a MAC an attacker can tamper with ciphertext undetected.
+      Use AES-GCM for authenticated encryption, or add HMAC-SHA256
+      over the ciphertext.
+    severity: WARNING
+    languages:
+      - python
+    patterns:
+      - pattern: AES.new(..., AES.MODE_CBC, ...)
+      - pattern-not-inside: |
+          ...
+          HMAC.new(...)
+          ...
+      - pattern-not-inside: |
+          ...
+          hmac.new(...)
+          ...
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-353: Missing Support for Integrity Check"
+      confidence: MEDIUM
+
+  - id: manicode.crypto.cbc-without-hmac-java
+    message: >-
+      AES/CBC used without authenticated encryption. CBC mode is
+      malleable; without a MAC an attacker can tamper with ciphertext.
+      Prefer AES/GCM/NoPadding for authenticated encryption.
+    severity: WARNING
+    languages:
+      - java
+    patterns:
+      - pattern: Cipher.getInstance("AES/CBC/...")
+      - pattern-not-inside: |
+          ...
+          Mac.getInstance(...)
+          ...
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-353: Missing Support for Integrity Check"
+      confidence: MEDIUM

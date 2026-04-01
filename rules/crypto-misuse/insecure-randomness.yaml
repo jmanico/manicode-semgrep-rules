@@ -1,0 +1,120 @@
+rules:
+  # ----------------------------------------------------------------
+  # Python: stdlib random used for security-sensitive values
+  # ----------------------------------------------------------------
+  - id: manicode.crypto.insecure-random-token-python
+    message: >-
+      The standard random module is not cryptographically secure. For
+      tokens, keys, secrets, nonces, or passwords use secrets.token_bytes(),
+      secrets.token_hex(), or secrets.token_urlsafe() instead.
+    severity: ERROR
+    languages:
+      - python
+    pattern-either:
+      - pattern: |
+          $TOKEN = random.random()
+      - pattern: |
+          $TOKEN = random.randint(...)
+      - pattern: |
+          $TOKEN = random.choice(...)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-338: Use of Cryptographically Weak Pseudo-Random Number Generator"
+      confidence: MEDIUM
+
+  # ----------------------------------------------------------------
+  # JavaScript: Math.random() for security-sensitive values
+  # ----------------------------------------------------------------
+  - id: manicode.crypto.insecure-math-random-javascript
+    message: >-
+      Math.random() is not cryptographically secure. For tokens, keys,
+      secrets, nonces, or passwords use crypto.randomBytes() (Node.js)
+      or crypto.getRandomValues() (browser) instead.
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    pattern-either:
+      - pattern: |
+          $TOKEN = Math.random()
+      - pattern: |
+          $TOKEN = Math.random().toString(...)
+      - pattern: |
+          Math.random().toString(...).substring(...)
+      - pattern: |
+          Math.random().toString(...).slice(...)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-338: Use of Cryptographically Weak Pseudo-Random Number Generator"
+      confidence: MEDIUM
+
+  # ----------------------------------------------------------------
+  # Java: java.util.Random for security contexts
+  # ----------------------------------------------------------------
+  - id: manicode.crypto.insecure-random-java
+    message: >-
+      java.util.Random is not cryptographically secure. For security-
+      sensitive random values (tokens, keys, nonces) use
+      java.security.SecureRandom instead.
+    severity: ERROR
+    languages:
+      - java
+    patterns:
+      - pattern: new Random(...)
+      - pattern-not: new SecureRandom(...)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-338: Use of Cryptographically Weak Pseudo-Random Number Generator"
+      confidence: MEDIUM
+
+  - id: manicode.crypto.insecure-random-java-nextbytes
+    message: >-
+      java.util.Random.nextBytes() is not cryptographically secure.
+      Use java.security.SecureRandom for generating security-sensitive
+      byte arrays (keys, IVs, nonces).
+    severity: ERROR
+    languages:
+      - java
+    pattern: |
+      $RNG = new Random(...);
+      ...
+      $RNG.nextBytes(...);
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-338: Use of Cryptographically Weak Pseudo-Random Number Generator"
+      confidence: HIGH
+
+  # ----------------------------------------------------------------
+  # Go: math/rand for security contexts
+  # ----------------------------------------------------------------
+  - id: manicode.crypto.insecure-rand-go
+    message: >-
+      math/rand is not cryptographically secure. For security-sensitive
+      random values (tokens, keys, nonces) use crypto/rand.Read() or
+      crypto/rand.Int() instead.
+    severity: ERROR
+    languages:
+      - go
+    pattern-either:
+      - pattern: rand.Intn(...)
+      - pattern: rand.Int()
+      - pattern: rand.Read(...)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-338: Use of Cryptographically Weak Pseudo-Random Number Generator"
+      confidence: MEDIUM

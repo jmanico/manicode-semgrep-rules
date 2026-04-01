@@ -1,0 +1,197 @@
+rules:
+  # ---------------------------------------------------------------------------
+  # Image served without EXIF stripping — Python (PIL / Pillow)
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.image-no-exif-strip-python
+    message: >-
+      An image is opened with PIL/Pillow and sent or saved without stripping
+      EXIF metadata first.  EXIF data can contain GPS coordinates, device
+      serial numbers, timestamps, and other information that may identify
+      or locate a confidential source.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern: |
+          $IMG = Image.open(...)
+          ...
+          $IMG.save(...)
+      - pattern-not: |
+          $IMG = Image.open(...)
+          ...
+          $EXIF = $IMG.getexif()
+          ...
+          $IMG.save(...)
+      - pattern-not: |
+          $IMG = Image.open(...)
+          ...
+          $IMG.info.pop("exif", ...)
+          ...
+          $IMG.save(...)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - python
+      references:
+        - https://owasp.org/www-community/vulnerabilities/Unrestricted_File_Upload
+
+  # ---------------------------------------------------------------------------
+  # Image served without EXIF stripping — JavaScript (sharp)
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.image-no-exif-strip-js
+    message: >-
+      An image is processed with sharp but EXIF/metadata is not removed
+      before output.  Image metadata can contain GPS coordinates, device
+      serial numbers, and timestamps that may identify a confidential
+      source.  Call .withMetadata(false) or .rotate() to strip EXIF.
+    severity: WARNING
+    languages: [javascript, typescript]
+    patterns:
+      - pattern: sharp($FILE).$METHOD(...)
+      - pattern-not: sharp($FILE).withMetadata(false).$METHOD(...)
+      - pattern-not: sharp($FILE).rotate().$METHOD(...)
+      - pattern-not: sharp($FILE).$INTERMEDIATE(...).withMetadata(false).$METHOD(...)
+      - pattern-not: sharp($FILE).$INTERMEDIATE(...).rotate().$METHOD(...)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - javascript
+        - typescript
+
+  # ---------------------------------------------------------------------------
+  # PDF generation without metadata removal — Python (reportlab)
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.pdf-no-metadata-strip-reportlab
+    message: >-
+      A PDF is generated with ReportLab without clearing document metadata.
+      PDFs can embed author name, creation tool, timestamps, and other
+      fields that may reveal the identity of a source or internal workflow
+      details.  Set the document info fields to empty strings before saving.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern: |
+          $DOC = SimpleDocTemplate(...)
+          ...
+          $DOC.build(...)
+      - pattern-not: |
+          $DOC = SimpleDocTemplate(...)
+          ...
+          $DOC.title = ...
+          ...
+          $DOC.build(...)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - python
+
+  # ---------------------------------------------------------------------------
+  # PDF generation without metadata removal — Python (pdfkit)
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.pdf-no-metadata-strip-pdfkit-python
+    message: >-
+      A PDF is generated with pdfkit without metadata-removal options.
+      PDFs can embed author, creator, and timestamp metadata that may
+      reveal source identity or internal newsroom details.
+    severity: WARNING
+    languages: [python]
+    pattern: pdfkit.from_string($HTML, $OUTPUT)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - python
+
+  # ---------------------------------------------------------------------------
+  # PDF generation without metadata removal — JavaScript (puppeteer)
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.pdf-no-metadata-strip-puppeteer
+    message: >-
+      A PDF is generated with Puppeteer without metadata removal.  Browser-
+      generated PDFs embed producer, creator, and timestamp metadata that
+      may expose internal tooling or source-related details.
+    severity: WARNING
+    languages: [javascript, typescript]
+    pattern: $PAGE.pdf(...)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - javascript
+        - typescript
+
+  # ---------------------------------------------------------------------------
+  # File upload served with original filename — Python
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.original-filename-in-disposition-python
+    message: >-
+      A file is served with the original user-supplied filename in the
+      Content-Disposition header.  Original filenames can reveal the
+      source's operating system, username, directory structure, or naming
+      conventions.  Generate a random or content-hash filename instead.
+    severity: WARNING
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $RESPONSE["Content-Disposition"] = f"...{$FILENAME}..."
+          - pattern: |
+              $RESPONSE["Content-Disposition"] = "..." + $FILENAME + "..."
+          - pattern: |
+              $RESPONSE["Content-Disposition"] = "...".format($FILENAME)
+          - pattern: |
+              $RESPONSE.headers["Content-Disposition"] = f"...{$FILENAME}..."
+          - pattern: |
+              $RESPONSE.headers["Content-Disposition"] = "..." + $FILENAME + "..."
+      - metavariable-regex:
+          metavariable: $FILENAME
+          regex: (?i).*(original|upload|user|file_?name|request).*
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - python
+
+  # ---------------------------------------------------------------------------
+  # File upload served with original filename — JavaScript
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.original-filename-in-disposition-js
+    message: >-
+      A file is served with the original user-supplied filename in the
+      Content-Disposition header.  Original filenames can reveal the
+      source's operating system, username, directory structure, or naming
+      conventions.  Generate a random or content-hash filename instead.
+    severity: WARNING
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $RES.set("Content-Disposition", `...${$FILENAME}...`)
+          - pattern: |
+              $RES.set("Content-Disposition", "..." + $FILENAME + "...")
+          - pattern: |
+              $RES.setHeader("Content-Disposition", `...${$FILENAME}...`)
+          - pattern: |
+              $RES.setHeader("Content-Disposition", "..." + $FILENAME + "...")
+          - pattern: |
+              $RES.header("Content-Disposition", `...${$FILENAME}...`)
+          - pattern: |
+              $RES.header("Content-Disposition", "..." + $FILENAME + "...")
+      - metavariable-regex:
+          metavariable: $FILENAME
+          regex: (?i).*(original|upload|user|file_?name|request).*
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - javascript
+        - typescript

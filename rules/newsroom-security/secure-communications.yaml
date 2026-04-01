@@ -1,0 +1,194 @@
+rules:
+  # ---------------------------------------------------------------------------
+  # Logging inside secure/confidential route handlers — Python
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.logging-in-secure-handler-python
+    message: >-
+      Logging or print statements detected inside a handler for a
+      confidential route (securedrop, tip, whistleblower).  Log entries
+      from these handlers can record request metadata, IP addresses, or
+      message content, undermining source confidentiality.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: logging.$METHOD(...)
+          - pattern: logger.$METHOD(...)
+          - pattern: print(...)
+      - pattern-inside: |
+          @$APP.route("=~/(?i).*(securedrop|tip|whistleblower|confidential).*/")
+          def $FUNC(...):
+              ...
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - python
+
+  # ---------------------------------------------------------------------------
+  # Logging inside secure/confidential route handlers — JavaScript
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.logging-in-secure-handler-js
+    message: >-
+      Logging or print statements detected inside a handler for a
+      confidential route (securedrop, tip, whistleblower).  Log entries
+      from these handlers can record request metadata, IP addresses, or
+      message content, undermining source confidentiality.
+    severity: ERROR
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: console.$METHOD(...)
+          - pattern: logger.$METHOD(...)
+          - pattern: log.$METHOD(...)
+      - pattern-either:
+          - pattern-inside: |
+              $APP.$VERB("=~/(?i).*(securedrop|tip|whistleblower|confidential).*/", function $FUNC(...) {
+                  ...
+              })
+          - pattern-inside: |
+              $APP.$VERB("=~/(?i).*(securedrop|tip|whistleblower|confidential).*/", ($REQ, $RES) => {
+                  ...
+              })
+          - pattern-inside: |
+              $APP.$VERB("=~/(?i).*(securedrop|tip|whistleblower|confidential).*/", async ($REQ, $RES) => {
+                  ...
+              })
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - javascript
+        - typescript
+
+  # ---------------------------------------------------------------------------
+  # SMTP without TLS — Python
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.smtp-without-tls-python
+    message: >-
+      An SMTP connection is created without enabling TLS via starttls().
+      Emails sent in plaintext can be intercepted on the network, exposing
+      source communications, tip content, or reporter-source exchanges.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern: |
+          $SERVER = smtplib.SMTP(...)
+          ...
+          $SERVER.sendmail(...)
+      - pattern-not: |
+          $SERVER = smtplib.SMTP(...)
+          ...
+          $SERVER.starttls(...)
+          ...
+          $SERVER.sendmail(...)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - python
+      references:
+        - https://docs.python.org/3/library/smtplib.html#smtplib.SMTP.starttls
+
+  # ---------------------------------------------------------------------------
+  # SMTP without TLS — Python (ssl=False)
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.smtp-ssl-false-python
+    message: >-
+      SMTP is configured with ssl=False or use_tls=False.  Email sent
+      without TLS can be intercepted, exposing source communications
+      and tip content.
+    severity: ERROR
+    languages: [python]
+    pattern-either:
+      - pattern: send_mail(..., ssl=False, ...)
+      - pattern: send_mail(..., use_tls=False, ...)
+      - pattern: EmailMessage(..., ssl=False, ...)
+      - pattern: EmailMessage(..., use_tls=False, ...)
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - python
+
+  # ---------------------------------------------------------------------------
+  # SMTP without TLS — JavaScript (nodemailer)
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.smtp-without-tls-js
+    message: >-
+      A Nodemailer transport is created with secure set to false and no
+      requireTLS option.  Emails sent without TLS can be intercepted on
+      the network, exposing source communications and tip content.
+    severity: ERROR
+    languages: [javascript, typescript]
+    pattern: |
+      nodemailer.createTransport({..., secure: false, ...})
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - javascript
+        - typescript
+
+  # ---------------------------------------------------------------------------
+  # Writing plaintext message content to files — Python
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.plaintext-message-write-python
+    message: >-
+      Message or tip content is written to a file in plaintext.  Storing
+      unencrypted source communications on disk creates a durable record
+      that can be seized, leaked, or accessed by unauthorized parties.
+      Encrypt content before writing to persistent storage.
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern-either:
+          - pattern: $FILE.write($MESSAGE)
+          - pattern: $FILE.write(f"...{$MESSAGE}...")
+          - pattern: $FILE.write("...".format($MESSAGE))
+      - metavariable-regex:
+          metavariable: $MESSAGE
+          regex: (?i).*(message|tip|content|body|plaintext|communication|submission).*
+      - pattern-inside: |
+          def $FUNC(...):
+              ...
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - python
+
+  # ---------------------------------------------------------------------------
+  # Writing plaintext message content to files — JavaScript
+  # ---------------------------------------------------------------------------
+  - id: manicode.newsroom.plaintext-message-write-js
+    message: >-
+      Message or tip content is written to a file in plaintext.  Storing
+      unencrypted source communications on disk creates a durable record
+      that can be seized, leaked, or accessed by unauthorized parties.
+      Encrypt content before writing to persistent storage.
+    severity: ERROR
+    languages: [javascript, typescript]
+    patterns:
+      - pattern-either:
+          - pattern: fs.writeFileSync($PATH, $MESSAGE, ...)
+          - pattern: fs.writeFile($PATH, $MESSAGE, ...)
+          - pattern: fs.appendFileSync($PATH, $MESSAGE, ...)
+          - pattern: fs.appendFile($PATH, $MESSAGE, ...)
+          - pattern: $STREAM.write($MESSAGE)
+      - metavariable-regex:
+          metavariable: $MESSAGE
+          regex: (?i).*(message|tip|content|body|plaintext|communication|submission).*
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      technology:
+        - javascript
+        - typescript

@@ -1,0 +1,210 @@
+rules:
+  # ---------------------------------------------------------------
+  # 1. Direct prompt injection — f-string interpolation into prompts
+  # ---------------------------------------------------------------
+  - id: manicode.prompt-injection.fstring-into-openai
+    languages: [python]
+    severity: WARNING
+    message: >-
+      User-controlled input is interpolated into an OpenAI chat prompt via
+      f-string. An attacker can craft input that overrides the system prompt
+      or instructs the model to perform unintended actions (prompt injection).
+      Sanitize or template user input separately from prompt construction.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-77: Improper Neutralization of Special Elements used in a Command ('Command Injection')"
+      confidence: MEDIUM
+      technology:
+        - openai
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    patterns:
+      - pattern-either:
+          - pattern: |
+              openai.ChatCompletion.create(..., messages=[..., {"role": "user", "content": f"...{$USER_INPUT}..."}, ...], ...)
+          - pattern: |
+              $CLIENT.chat.completions.create(..., messages=[..., {"role": "user", "content": f"...{$USER_INPUT}..."}, ...], ...)
+          - pattern: |
+              $CLIENT.chat.completions.create(..., messages=[..., {"role": "system", "content": f"...{$USER_INPUT}..."}, ...], ...)
+      - pattern-not: |
+          $CLIENT.chat.completions.create(..., messages=[..., {"role": "user", "content": f"...{$CONST}..."}, ...], ...)
+      - metavariable-pattern:
+          metavariable: $USER_INPUT
+          patterns:
+            - pattern-either:
+                - pattern: request.$ATTR
+                - pattern: user_input
+                - pattern: user_message
+                - pattern: query
+                - pattern: prompt
+
+  - id: manicode.prompt-injection.format-into-openai
+    languages: [python]
+    severity: WARNING
+    message: >-
+      User-controlled input is inserted into an OpenAI prompt via str.format().
+      This enables prompt injection attacks where an attacker can manipulate
+      model behavior. Use structured message construction and validate input.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-77: Improper Neutralization of Special Elements used in a Command ('Command Injection')"
+      confidence: MEDIUM
+      technology:
+        - openai
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $CLIENT.chat.completions.create(..., messages=[..., {"role": "user", "content": "...".format(..., $USER_INPUT, ...)}, ...], ...)
+          - pattern: |
+              $CLIENT.chat.completions.create(..., messages=[..., {"role": "system", "content": "...".format(..., $USER_INPUT, ...)}, ...], ...)
+
+  - id: manicode.prompt-injection.concat-into-openai
+    languages: [python]
+    severity: WARNING
+    message: >-
+      User-controlled input is concatenated into an OpenAI prompt string.
+      This allows prompt injection. Avoid string concatenation for prompt
+      construction with untrusted input.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-77: Improper Neutralization of Special Elements used in a Command ('Command Injection')"
+      confidence: MEDIUM
+      technology:
+        - openai
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $CLIENT.chat.completions.create(..., messages=[..., {"role": "user", "content": $PREFIX + $USER_INPUT}, ...], ...)
+          - pattern: |
+              $CLIENT.chat.completions.create(..., messages=[..., {"role": "user", "content": $USER_INPUT + $SUFFIX}, ...], ...)
+          - pattern: |
+              $CLIENT.chat.completions.create(..., messages=[..., {"role": "system", "content": $PREFIX + $USER_INPUT}, ...], ...)
+
+  # ---------------------------------------------------------------
+  # 2. Direct prompt injection — Anthropic SDK
+  # ---------------------------------------------------------------
+  - id: manicode.prompt-injection.fstring-into-anthropic
+    languages: [python]
+    severity: WARNING
+    message: >-
+      User-controlled input is interpolated into an Anthropic Claude prompt
+      via f-string. This enables prompt injection attacks. Validate and
+      constrain user input before including it in prompts.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-77: Improper Neutralization of Special Elements used in a Command ('Command Injection')"
+      confidence: MEDIUM
+      technology:
+        - anthropic
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $CLIENT.messages.create(..., messages=[..., {"role": "user", "content": f"...{$USER_INPUT}..."}, ...], ...)
+          - pattern: |
+              $CLIENT.messages.create(..., system=f"...{$USER_INPUT}...", ...)
+
+  - id: manicode.prompt-injection.concat-into-anthropic
+    languages: [python]
+    severity: WARNING
+    message: >-
+      User-controlled input is concatenated into an Anthropic Claude prompt.
+      This enables prompt injection. Use structured input handling instead.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-77: Improper Neutralization of Special Elements used in a Command ('Command Injection')"
+      confidence: MEDIUM
+      technology:
+        - anthropic
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $CLIENT.messages.create(..., messages=[..., {"role": "user", "content": $PREFIX + $USER_INPUT}, ...], ...)
+          - pattern: |
+              $CLIENT.messages.create(..., system=$PREFIX + $USER_INPUT, ...)
+
+  # ---------------------------------------------------------------
+  # 3. Direct prompt injection — LangChain
+  # ---------------------------------------------------------------
+  - id: manicode.prompt-injection.langchain-fstring-prompt
+    languages: [python]
+    severity: WARNING
+    message: >-
+      User input is directly interpolated into a LangChain prompt template
+      or chain invocation. Use LangChain's built-in input variables and
+      PromptTemplate mechanism rather than f-string interpolation to reduce
+      prompt injection risk.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-77: Improper Neutralization of Special Elements used in a Command ('Command Injection')"
+      confidence: MEDIUM
+      technology:
+        - langchain
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    pattern-either:
+      - pattern: |
+          LLMChain(..., prompt=PromptTemplate(..., template=f"...{$USER_INPUT}..."), ...)
+      - pattern: |
+          ChatPromptTemplate.from_messages([..., ("human", f"...{$USER_INPUT}..."), ...])
+      - pattern: |
+          HumanMessagePromptTemplate.from_template(f"...{$USER_INPUT}...")
+      - pattern: |
+          SystemMessagePromptTemplate.from_template(f"...{$USER_INPUT}...")
+
+  # ---------------------------------------------------------------
+  # 4. System prompt leakage — returning system prompt to users
+  # ---------------------------------------------------------------
+  - id: manicode.prompt-injection.system-prompt-exposure
+    languages: [python]
+    severity: WARNING
+    message: >-
+      A variable named 'system_prompt' or 'system_message' is returned
+      directly in an API response or rendered to the user. Exposing system
+      prompts can reveal application logic, security controls, and
+      instructions that help attackers craft targeted prompt injections.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-200: Exposure of Sensitive Information to an Unauthorized Actor"
+      confidence: MEDIUM
+      references:
+        - https://owasp.org/www-project-top-10-for-large-language-model-applications/
+    pattern-either:
+      - pattern: |
+          return {..., "system_prompt": $SYSTEM_PROMPT, ...}
+      - pattern: |
+          jsonify(..., system_prompt=$SYSTEM_PROMPT, ...)
+      - pattern: |
+          JsonResponse({..., "system_prompt": $SYSTEM_PROMPT, ...})
+      - pattern: |
+          return Response(..., $SYSTEM_PROMPT, ...)
+      - pattern: |
+          return {..., "system_message": $SYSTEM_MSG, ...}

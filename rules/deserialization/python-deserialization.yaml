@@ -1,0 +1,162 @@
+rules:
+  - id: manicode.deserialization.python-yaml-unsafe-load
+    message: >-
+      yaml.load() called without a safe Loader argument. This allows arbitrary
+      Python object instantiation and leads to remote code execution when
+      processing untrusted input. Use yaml.safe_load() or pass
+      Loader=yaml.SafeLoader explicitly.
+    severity: ERROR
+    languages:
+      - python
+    patterns:
+      - pattern: yaml.load($X, ...)
+      - pattern-not: yaml.load($X, Loader=yaml.SafeLoader, ...)
+      - pattern-not: yaml.load($X, Loader=yaml.CSafeLoader, ...)
+      - pattern-not: yaml.load($X, Loader=SafeLoader, ...)
+      - pattern-not: yaml.load($X, Loader=CSafeLoader, ...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: HIGH
+
+  - id: manicode.deserialization.python-yaml-load-no-loader
+    message: >-
+      yaml.load() called with a single argument and no Loader parameter.
+      This defaults to the unsafe FullLoader (or Loader in older PyYAML
+      versions) and can execute arbitrary code. Use yaml.safe_load() instead.
+    severity: ERROR
+    languages:
+      - python
+    pattern: yaml.load($X)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: HIGH
+
+  - id: manicode.deserialization.python-pickle-loads
+    message: >-
+      pickle.loads() deserializes arbitrary Python objects and executes
+      __reduce__ methods during unpickling. An attacker who controls the
+      serialized data achieves remote code execution. Never unpickle data
+      from untrusted sources.
+    severity: ERROR
+    languages:
+      - python
+    pattern: pickle.loads($X)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: HIGH
+
+  - id: manicode.deserialization.python-pickle-load
+    message: >-
+      pickle.load() deserializes arbitrary Python objects from a file-like
+      object and can execute arbitrary code via __reduce__. Never unpickle
+      data from untrusted sources.
+    severity: ERROR
+    languages:
+      - python
+    pattern: pickle.load($X)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: HIGH
+
+  - id: manicode.deserialization.python-shelve-open
+    message: >-
+      shelve.open() uses pickle internally to serialize and deserialize
+      objects. Opening a shelve database from an untrusted source can lead
+      to arbitrary code execution. Ensure shelve is only used with trusted,
+      locally-generated data.
+    severity: ERROR
+    languages:
+      - python
+    pattern: shelve.open($X)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: MEDIUM
+
+  - id: manicode.deserialization.python-marshal-loads
+    message: >-
+      marshal.loads() can execute arbitrary code when deserializing
+      malicious data. The marshal module is not intended for untrusted data
+      and provides no security guarantees. Use json or another safe
+      serialization format instead.
+    severity: ERROR
+    languages:
+      - python
+    pattern: marshal.loads($X)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: HIGH
+
+  - id: manicode.deserialization.python-jsonpickle-decode
+    message: >-
+      jsonpickle.decode() reconstructs arbitrary Python objects from JSON
+      and can execute arbitrary code. An attacker who controls the input
+      achieves remote code execution. Use standard json.loads() instead.
+    severity: ERROR
+    languages:
+      - python
+    pattern: jsonpickle.decode($X)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: HIGH
+
+  - id: manicode.deserialization.python-dill-loads
+    message: >-
+      dill.loads() extends pickle and can deserialize arbitrary Python
+      objects including lambdas and closures, enabling remote code
+      execution. Never use dill to deserialize untrusted data.
+    severity: ERROR
+    languages:
+      - python
+    pattern: dill.loads($X)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: HIGH
+
+  - id: manicode.deserialization.python-dill-load
+    message: >-
+      dill.load() extends pickle and can deserialize arbitrary Python
+      objects from a file-like object, enabling remote code execution.
+      Never use dill to deserialize untrusted data.
+    severity: ERROR
+    languages:
+      - python
+    pattern: dill.load($X)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: HIGH

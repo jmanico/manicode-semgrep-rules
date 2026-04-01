@@ -1,0 +1,125 @@
+rules:
+  # ---------------------------------------------------------------
+  # 1. Object.assign(model, req.body)
+  # ---------------------------------------------------------------
+  - id: manicode.mass-assignment.express-object-assign-reqbody
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Object.assign() copies all enumerable properties from req.body
+      onto the target object. An attacker can inject extra fields
+      (e.g. role, isAdmin) to escalate privileges or corrupt data.
+      Pick only the expected fields from req.body before assigning.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+      confidence: HIGH
+      technology:
+        - express
+      references:
+        - https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/
+    pattern-either:
+      - pattern: Object.assign($OBJ, req.body)
+      - pattern: Object.assign($OBJ, req.body, ...)
+      - pattern: Object.assign($OBJ, request.body)
+
+  # ---------------------------------------------------------------
+  # 2. Spread operator {...req.body} in model create/update
+  # ---------------------------------------------------------------
+  - id: manicode.mass-assignment.express-spread-reqbody
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Spreading req.body directly into a model create or update
+      operation passes all attacker-controlled fields to the
+      database layer. Destructure only the expected fields from
+      req.body before passing them to the model.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+      confidence: MEDIUM
+      technology:
+        - express
+      references:
+        - https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/
+    pattern-either:
+      - pattern: $MODEL.create({...req.body})
+      - pattern: $MODEL.create({...req.body, ...})
+      - pattern: $MODEL.update({...req.body})
+      - pattern: $MODEL.update({...req.body, ...})
+      - pattern: $MODEL.findOneAndUpdate($QUERY, {...req.body})
+      - pattern: $MODEL.findOneAndUpdate($QUERY, {...req.body, ...})
+      - pattern: $MODEL.findByIdAndUpdate($ID, {...req.body})
+      - pattern: $MODEL.findByIdAndUpdate($ID, {...req.body, ...})
+      - pattern: new $MODEL({...req.body})
+      - pattern: new $MODEL({...req.body, ...})
+
+  # ---------------------------------------------------------------
+  # 3. Mongoose findOneAndUpdate with req.body (no $set restriction)
+  # ---------------------------------------------------------------
+  - id: manicode.mass-assignment.express-mongoose-update-reqbody
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Passing req.body directly as the update document to a Mongoose
+      update method allows an attacker to use MongoDB update operators
+      (e.g. $set, $unset, $inc) to modify arbitrary fields. Always
+      wrap updates in an explicit { $set: { ...allowedFields } } and
+      validate input fields.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+      confidence: HIGH
+      technology:
+        - express
+        - mongoose
+      references:
+        - https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/
+    pattern-either:
+      - pattern: $MODEL.findOneAndUpdate($QUERY, req.body)
+      - pattern: $MODEL.findOneAndUpdate($QUERY, req.body, ...)
+      - pattern: $MODEL.findByIdAndUpdate($ID, req.body)
+      - pattern: $MODEL.findByIdAndUpdate($ID, req.body, ...)
+      - pattern: $MODEL.updateOne($QUERY, req.body)
+      - pattern: $MODEL.updateOne($QUERY, req.body, ...)
+      - pattern: $MODEL.updateMany($QUERY, req.body)
+      - pattern: $MODEL.updateMany($QUERY, req.body, ...)
+
+  # ---------------------------------------------------------------
+  # 4. Sequelize Model.create(req.body) / Model.update(req.body)
+  # ---------------------------------------------------------------
+  - id: manicode.mass-assignment.express-sequelize-reqbody
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      Passing req.body directly to Sequelize create() or update()
+      allows an attacker to set any model attribute, including
+      sensitive or internal columns. Explicitly list allowed fields
+      or use the 'fields' option to restrict writable attributes.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+      confidence: HIGH
+      technology:
+        - express
+        - sequelize
+      references:
+        - https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/
+    pattern-either:
+      - pattern: $MODEL.create(req.body)
+      - pattern: $MODEL.update(req.body, ...)
+      - pattern: $MODEL.bulkCreate(req.body)
+      - pattern: $MODEL.upsert(req.body)
+      - pattern: $MODEL.build(req.body)

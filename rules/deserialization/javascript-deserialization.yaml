@@ -1,0 +1,94 @@
+rules:
+  - id: manicode.deserialization.js-node-serialize-unserialize
+    message: >-
+      node-serialize unserialize() can execute arbitrary JavaScript via
+      immediately-invoked function expressions (IIFE) embedded in
+      serialized data. This is a known remote code execution vector.
+      Do not use node-serialize with untrusted input.
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    patterns:
+      - pattern-either:
+          - pattern: require("node-serialize").unserialize($X)
+          - pattern: |
+              $NS = require("node-serialize");
+              ...
+              $NS.unserialize($X);
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: HIGH
+
+  - id: manicode.deserialization.js-serialize-javascript-eval
+    message: >-
+      Using eval() to deserialize output from serialize-javascript enables
+      arbitrary code execution. The serialize-javascript library is
+      intended for server-side rendering, not for deserializing untrusted
+      input. Use JSON.parse() instead.
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    patterns:
+      - pattern-either:
+          - pattern: eval($SERIALIZED)
+          - pattern: eval("(" + $SERIALIZED + ")")
+          - pattern: new Function("return " + $SERIALIZED)()
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: MEDIUM
+
+  - id: manicode.deserialization.js-yaml-unsafe-load
+    message: >-
+      js-yaml's yaml.load() (the non-safe variant) can construct arbitrary
+      JavaScript objects and execute code when processing untrusted YAML.
+      Use yaml.load() with schema: SAFE_SCHEMA, or use the safeLoad()
+      function instead.
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    patterns:
+      - pattern: yaml.load($X)
+      - pattern-not: "yaml.load($X, {schema: $SAFE_SCHEMA})"
+      - pattern-not: yaml.safeLoad(...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: MEDIUM
+
+  - id: manicode.deserialization.js-cryo-parse
+    message: >-
+      cryo.parse() can reconstruct arbitrary JavaScript objects including
+      functions, enabling remote code execution when processing untrusted
+      data. Use JSON.parse() or a safe serialization library instead.
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    patterns:
+      - pattern-either:
+          - pattern: cryo.parse($X)
+          - pattern: |
+              $CRYO = require("cryo");
+              ...
+              $CRYO.parse($X);
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-502: Deserialization of Untrusted Data"
+      confidence: HIGH

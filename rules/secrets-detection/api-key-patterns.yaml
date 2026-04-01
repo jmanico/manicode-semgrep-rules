@@ -1,0 +1,179 @@
+rules:
+  - id: manicode.secrets.stripe-secret-key
+    message: >-
+      Stripe secret key detected. This key grants full access to your
+      Stripe account. Rotate this key immediately and use environment
+      variables or a secrets manager to store it.
+    severity: WARNING
+    languages:
+      - generic
+    pattern-regex: "sk_live_[a-zA-Z0-9]{24,}"
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-798: Use of Hard-coded Credentials"
+      confidence: HIGH
+
+  - id: manicode.secrets.stripe-publishable-key
+    message: >-
+      Stripe publishable key detected in source code. While publishable
+      keys are less sensitive than secret keys, they should still be
+      managed via environment variables rather than hardcoded.
+    severity: WARNING
+    languages:
+      - generic
+    pattern-regex: "pk_live_[a-zA-Z0-9]{24,}"
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-798: Use of Hard-coded Credentials"
+      confidence: HIGH
+
+  - id: manicode.secrets.twilio-api-key
+    message: >-
+      Twilio API key detected. Rotate this key immediately and store
+      it in a secrets manager or environment variable.
+    severity: WARNING
+    languages:
+      - generic
+    pattern-regex: "SK[a-f0-9]{32}"
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-798: Use of Hard-coded Credentials"
+      confidence: HIGH
+
+  - id: manicode.secrets.sendgrid-api-key
+    message: >-
+      SendGrid API key detected. Rotate this key immediately and use
+      environment variables or a secrets manager to store it.
+    severity: WARNING
+    languages:
+      - generic
+    pattern-regex: "SG\\.[a-zA-Z0-9_-]{22}\\.[a-zA-Z0-9_-]{43}"
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-798: Use of Hard-coded Credentials"
+      confidence: HIGH
+
+  - id: manicode.secrets.slack-bot-token
+    message: >-
+      Slack bot token detected. Rotate this token immediately and store
+      it in a secrets manager or environment variable.
+    severity: WARNING
+    languages:
+      - generic
+    pattern-regex: "xoxb-[0-9]{10,}-[a-zA-Z0-9]{24,}"
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-798: Use of Hard-coded Credentials"
+      confidence: HIGH
+
+  - id: manicode.secrets.slack-user-token
+    message: >-
+      Slack user token detected. Rotate this token immediately and store
+      it in a secrets manager or environment variable.
+    severity: WARNING
+    languages:
+      - generic
+    pattern-regex: "xoxp-[0-9]{10,}-[a-zA-Z0-9]{24,}"
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-798: Use of Hard-coded Credentials"
+      confidence: HIGH
+
+  - id: manicode.secrets.slack-app-token
+    message: >-
+      Slack app-level token detected. Rotate this token immediately
+      and store it in a secrets manager or environment variable.
+    severity: WARNING
+    languages:
+      - generic
+    pattern-regex: "xapp-[0-9]{1,}-[a-zA-Z0-9]{10,}-[a-zA-Z0-9]{24,}"
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-798: Use of Hard-coded Credentials"
+      confidence: HIGH
+
+  - id: manicode.secrets.github-personal-access-token
+    message: >-
+      GitHub personal access token detected. Rotate this token immediately
+      and store it in a secrets manager or environment variable.
+    severity: WARNING
+    languages:
+      - generic
+    pattern-regex: "ghp_[a-zA-Z0-9]{36}"
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-798: Use of Hard-coded Credentials"
+      confidence: HIGH
+
+  - id: manicode.secrets.github-oauth-token
+    message: >-
+      GitHub OAuth access token detected. Rotate this token immediately
+      and store it in a secrets manager or environment variable.
+    severity: WARNING
+    languages:
+      - generic
+    pattern-regex: "gho_[a-zA-Z0-9]{36}"
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-798: Use of Hard-coded Credentials"
+      confidence: HIGH
+
+  - id: manicode.secrets.github-app-token
+    message: >-
+      GitHub App installation token detected. Rotate this token immediately
+      and store it in a secrets manager or environment variable.
+    severity: WARNING
+    languages:
+      - generic
+    pattern-regex: "ghs_[a-zA-Z0-9]{36}"
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-798: Use of Hard-coded Credentials"
+      confidence: HIGH
+
+  - id: manicode.secrets.jwt-token
+    message: >-
+      JSON Web Token (JWT) detected in source code. JWTs may contain
+      sensitive claims and should not be hardcoded. Use environment
+      variables or a secrets manager to handle tokens at runtime.
+    severity: WARNING
+    languages:
+      - generic
+    pattern-regex: "eyJ[a-zA-Z0-9_-]*\\.eyJ[a-zA-Z0-9_-]*\\.[a-zA-Z0-9_-]+"
+    metadata:
+      category: security
+      subcategory:
+        - audit
+      cwe:
+        - "CWE-798: Use of Hard-coded Credentials"
+      confidence: MEDIUM

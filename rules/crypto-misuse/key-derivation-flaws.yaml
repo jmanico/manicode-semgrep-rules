@@ -1,0 +1,223 @@
+rules:
+  # ----------------------------------------------------------------
+  # PBKDF2 with insufficient iterations
+  # ----------------------------------------------------------------
+  - id: manicode.crypto.pbkdf2-low-iterations-python
+    message: >-
+      PBKDF2 iteration count is below 600,000. OWASP recommends at least
+      600,000 iterations for PBKDF2-HMAC-SHA256 as of 2023. Increase
+      the iteration count or migrate to argon2id.
+    severity: WARNING
+    languages:
+      - python
+    patterns:
+      - pattern: hashlib.pbkdf2_hmac(..., iterations=$ITER, ...)
+      - metavariable-comparison:
+          metavariable: $ITER
+          comparison: $ITER < 600000
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-916: Use of Password Hash With Insufficient Computational Effort"
+      confidence: HIGH
+
+  - id: manicode.crypto.pbkdf2-low-iterations-java
+    message: >-
+      PBKDF2 iteration count is below 600,000. OWASP recommends at least
+      600,000 iterations for PBKDF2-HMAC-SHA256. Increase the iteration
+      count or migrate to argon2id.
+    severity: WARNING
+    languages:
+      - java
+    patterns:
+      - pattern: new PBEKeySpec(..., $ITER, ...)
+      - metavariable-comparison:
+          metavariable: $ITER
+          comparison: $ITER < 600000
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-916: Use of Password Hash With Insufficient Computational Effort"
+      confidence: HIGH
+
+  - id: manicode.crypto.pbkdf2-low-iterations-javascript
+    message: >-
+      PBKDF2 iteration count is below 600,000. OWASP recommends at least
+      600,000 iterations for PBKDF2-HMAC-SHA256. Increase the iteration
+      count or migrate to argon2id.
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    patterns:
+      - pattern: crypto.pbkdf2Sync(..., $ITER, ...)
+      - metavariable-comparison:
+          metavariable: $ITER
+          comparison: $ITER < 600000
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-916: Use of Password Hash With Insufficient Computational Effort"
+      confidence: HIGH
+
+  # ----------------------------------------------------------------
+  # bcrypt cost factor too low
+  # ----------------------------------------------------------------
+  - id: manicode.crypto.bcrypt-low-cost-python
+    message: >-
+      bcrypt cost factor is below 10. A low cost factor makes brute-force
+      attacks faster. Use a cost factor of at least 10 (12 recommended).
+    severity: WARNING
+    languages:
+      - python
+    patterns:
+      - pattern: bcrypt.gensalt(rounds=$ROUNDS)
+      - metavariable-comparison:
+          metavariable: $ROUNDS
+          comparison: $ROUNDS < 10
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-916: Use of Password Hash With Insufficient Computational Effort"
+      confidence: HIGH
+
+  - id: manicode.crypto.bcrypt-low-cost-javascript
+    message: >-
+      bcrypt cost factor (saltRounds) is below 10. A low cost factor
+      makes brute-force attacks faster. Use at least 10 (12 recommended).
+    severity: WARNING
+    languages:
+      - javascript
+      - typescript
+    patterns:
+      - pattern-either:
+          - pattern: bcrypt.hash($PWD, $ROUNDS)
+          - pattern: bcrypt.hashSync($PWD, $ROUNDS)
+      - metavariable-comparison:
+          metavariable: $ROUNDS
+          comparison: $ROUNDS < 10
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-916: Use of Password Hash With Insufficient Computational Effort"
+      confidence: HIGH
+
+  # ----------------------------------------------------------------
+  # Raw password used directly as encryption key
+  # ----------------------------------------------------------------
+  - id: manicode.crypto.password-as-key-python
+    message: >-
+      A password is being encoded and used directly as an encryption key.
+      Passwords lack sufficient entropy for direct use as cipher keys.
+      Derive a key using PBKDF2, scrypt, or argon2id with a random salt.
+    severity: ERROR
+    languages:
+      - python
+    pattern-either:
+      - pattern: AES.new($PASSWORD.encode(...), ...)
+      - pattern: AES.new($PASSWORD.encode(), ...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-321: Use of Hard-coded Cryptographic Key"
+      confidence: MEDIUM
+
+  - id: manicode.crypto.password-as-key-javascript
+    message: >-
+      A password is being used directly as an encryption key via Buffer
+      conversion. Passwords lack sufficient entropy for direct use as
+      cipher keys. Derive a key with PBKDF2 or scrypt with a random salt.
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    pattern-either:
+      - pattern: createCipheriv(..., Buffer.from($PASSWORD, ...), ...)
+      - pattern: createDecipheriv(..., Buffer.from($PASSWORD, ...), ...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-321: Use of Hard-coded Cryptographic Key"
+      confidence: MEDIUM
+
+  # ----------------------------------------------------------------
+  # SHA-256 of password used as key
+  # ----------------------------------------------------------------
+  - id: manicode.crypto.sha256-password-as-key-python
+    message: >-
+      SHA-256 hash of a password used as an encryption key. A single
+      hash invocation provides no brute-force resistance. Use a proper
+      KDF (PBKDF2, scrypt, or argon2id) with a random salt and high
+      iteration count.
+    severity: ERROR
+    languages:
+      - python
+    pattern: |
+      $KEY = hashlib.sha256($PASSWORD).digest()
+      ...
+      AES.new($KEY, ...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-916: Use of Password Hash With Insufficient Computational Effort"
+      confidence: HIGH
+
+  - id: manicode.crypto.sha256-password-as-key-javascript
+    message: >-
+      SHA-256 hash of a password used as an encryption key. A single
+      hash invocation provides no brute-force resistance. Use a proper
+      KDF (PBKDF2 or scrypt) with a random salt and high iteration count.
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    pattern: |
+      $HASH = crypto.createHash("sha256").update($PASSWORD).digest();
+      ...
+      createCipheriv(..., $HASH, ...);
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-916: Use of Password Hash With Insufficient Computational Effort"
+      confidence: HIGH
+
+  - id: manicode.crypto.sha256-password-as-key-java
+    message: >-
+      SHA-256 hash of a password used as an encryption key. A single
+      hash invocation provides no brute-force resistance. Use a proper
+      KDF (PBKDF2, scrypt, or argon2id) with a random salt and high
+      iteration count.
+    severity: ERROR
+    languages:
+      - java
+    pattern: |
+      $DIGEST = MessageDigest.getInstance("SHA-256");
+      ...
+      $KEY = $DIGEST.digest($PASSWORD.getBytes(...));
+      ...
+      new SecretKeySpec($KEY, ...);
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-916: Use of Password Hash With Insufficient Computational Effort"
+      confidence: HIGH

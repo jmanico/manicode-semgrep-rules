@@ -1,0 +1,136 @@
+rules:
+  # ---------------------------------------------------------------
+  # 1. BeanUtils.copyProperties from request parameter to entity
+  # ---------------------------------------------------------------
+  - id: manicode.mass-assignment.spring-beanutils-copy
+    languages: [java]
+    severity: WARNING
+    message: >-
+      BeanUtils.copyProperties() copies all matching properties from the
+      source to the target. When the source is a request or controller
+      parameter and the target is a JPA entity, an attacker can set
+      unintended fields (e.g. role, isAdmin, price). Use a DTO with
+      explicit field mapping instead.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+      confidence: MEDIUM
+      technology:
+        - spring
+      references:
+        - https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/
+    pattern-either:
+      - pattern: |
+          BeanUtils.copyProperties($REQ, $ENTITY);
+      - pattern: |
+          org.springframework.beans.BeanUtils.copyProperties($REQ, $ENTITY);
+      - pattern: |
+          org.apache.commons.beanutils.BeanUtils.copyProperties($ENTITY, $REQ);
+
+  # ---------------------------------------------------------------
+  # 2. @Entity class used directly as @RequestBody
+  # ---------------------------------------------------------------
+  - id: manicode.mass-assignment.spring-entity-as-requestbody
+    languages: [java]
+    severity: WARNING
+    message: >-
+      A class is bound directly from @RequestBody in a controller
+      handler. If the target type is a JPA entity, an attacker can
+      set any mapped column by including extra fields in the JSON
+      payload. Use a dedicated DTO or form object and map fields
+      explicitly.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+      confidence: LOW
+      technology:
+        - spring
+      references:
+        - https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/
+    pattern-either:
+      - pattern: |
+          @RequestMapping(...)
+          $RET $METHOD(..., @RequestBody $TYPE $PARAM, ...) { ... }
+      - pattern: |
+          @PostMapping(...)
+          $RET $METHOD(..., @RequestBody $TYPE $PARAM, ...) { ... }
+      - pattern: |
+          @PutMapping(...)
+          $RET $METHOD(..., @RequestBody $TYPE $PARAM, ...) { ... }
+      - pattern: |
+          @PatchMapping(...)
+          $RET $METHOD(..., @RequestBody $TYPE $PARAM, ...) { ... }
+
+  # ---------------------------------------------------------------
+  # 3. @ModelAttribute without @InitBinder allowlist
+  # ---------------------------------------------------------------
+  - id: manicode.mass-assignment.spring-modelattribute-no-initbinder
+    languages: [java]
+    severity: WARNING
+    message: >-
+      @ModelAttribute binds all request parameters to object fields.
+      Without a corresponding @InitBinder that calls
+      setAllowedFields() or setDisallowedFields(), an attacker can
+      bind arbitrary fields. Add an @InitBinder method to restrict
+      bindable fields.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+      confidence: MEDIUM
+      technology:
+        - spring
+      references:
+        - https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/
+    patterns:
+      - pattern: |
+          @ModelAttribute $TYPE $PARAM
+      - pattern-not-inside: |
+          class $C {
+            ...
+            @InitBinder
+            $RET2 $BINDER_METHOD(...) { ... }
+            ...
+          }
+
+  # ---------------------------------------------------------------
+  # 4. ObjectMapper readValue into entity from request
+  # ---------------------------------------------------------------
+  - id: manicode.mass-assignment.spring-objectmapper-readvalue
+    languages: [java]
+    severity: WARNING
+    message: >-
+      ObjectMapper.readValue() deserializes JSON directly into an object.
+      When the JSON source is a request body and the target is an entity
+      or domain object, attackers can set unintended fields. Deserialize
+      into a DTO and map allowed fields explicitly.
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+      confidence: MEDIUM
+      technology:
+        - spring
+      references:
+        - https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/
+    pattern-either:
+      - pattern: |
+          $MAPPER.readValue($REQ.getInputStream(), $TYPE.class)
+      - pattern: |
+          $MAPPER.readValue($REQ.getReader(), $TYPE.class)
+      - pattern: |
+          $MAPPER.readValue($REQ.getBody(), $TYPE.class)
+      - pattern: |
+          $MAPPER.readValue((String) $REQ.getBody(), $TYPE.class)
+      - pattern: |
+          $MAPPER.readValue($BODY, $TYPE.class)

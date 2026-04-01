@@ -1,0 +1,107 @@
+rules:
+  # ----------------------------------------------------------------
+  # Python: direct == on security tokens / hashes
+  # ----------------------------------------------------------------
+  - id: manicode.crypto.timing-attack-python-hmac
+    message: >-
+      Direct string comparison of HMAC, hash, token, digest, or
+      signature values. This is vulnerable to timing attacks. Use
+      hmac.compare_digest() for constant-time comparison.
+    severity: ERROR
+    languages:
+      - python
+    pattern-either:
+      - pattern: $HMAC == ...
+      - pattern: $HASH == ...
+      - pattern: $TOKEN == ...
+      - pattern: $DIGEST == ...
+      - pattern: $SIGNATURE == ...
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-208: Observable Timing Discrepancy"
+      confidence: MEDIUM
+
+  # ----------------------------------------------------------------
+  # JavaScript: direct === on security tokens / hashes
+  # ----------------------------------------------------------------
+  - id: manicode.crypto.timing-attack-javascript-hmac
+    message: >-
+      Direct string comparison of HMAC, hash, token, digest, or
+      signature values. This is vulnerable to timing attacks. Use
+      crypto.timingSafeEqual() for constant-time comparison.
+    severity: ERROR
+    languages:
+      - javascript
+      - typescript
+    pattern-either:
+      - pattern: $HMAC === ...
+      - pattern: $HASH === ...
+      - pattern: $TOKEN === ...
+      - pattern: $DIGEST === ...
+      - pattern: $SIGNATURE === ...
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-208: Observable Timing Discrepancy"
+      confidence: MEDIUM
+
+  # ----------------------------------------------------------------
+  # Go: == comparison for hash/hmac slices
+  # ----------------------------------------------------------------
+  - id: manicode.crypto.timing-attack-go-hmac
+    message: >-
+      Direct == comparison of hash or HMAC values. This is vulnerable
+      to timing attacks. Use crypto/subtle.ConstantTimeCompare() for
+      constant-time comparison.
+    severity: ERROR
+    languages:
+      - go
+    pattern-either:
+      - pattern: |
+          if $HMAC == $OTHER { ... }
+      - pattern: |
+          if $HASH == $OTHER { ... }
+      - pattern: |
+          if $DIGEST == $OTHER { ... }
+      - pattern: |
+          if $SIGNATURE == $OTHER { ... }
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-208: Observable Timing Discrepancy"
+      confidence: MEDIUM
+
+  # ----------------------------------------------------------------
+  # Java: .equals() for byte array comparison of hashes
+  # ----------------------------------------------------------------
+  - id: manicode.crypto.timing-attack-java-equals
+    message: >-
+      Arrays.equals() or .equals() used to compare hash/digest byte
+      arrays. This is vulnerable to timing attacks. Use
+      MessageDigest.isEqual() for constant-time comparison.
+    severity: ERROR
+    languages:
+      - java
+    pattern-either:
+      - pattern: Arrays.equals($HASH, ...)
+      - pattern: Arrays.equals($DIGEST, ...)
+      - pattern: Arrays.equals($HMAC, ...)
+      - pattern: Arrays.equals($SIGNATURE, ...)
+      - pattern: $HASH.equals(...)
+      - pattern: $DIGEST.equals(...)
+      - pattern: $HMAC.equals(...)
+      - pattern: $SIGNATURE.equals(...)
+    metadata:
+      category: security
+      subcategory:
+        - vuln
+      cwe:
+        - "CWE-208: Observable Timing Discrepancy"
+      confidence: MEDIUM
