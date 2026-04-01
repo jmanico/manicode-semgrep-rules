@@ -21,22 +21,6 @@ rules:
         - https://owasp.org/www-project-top-10-for-large-language-model-applications/
     pattern-either:
       - pattern: |
-          $RESPONSE = $CLIENT.chat.completions.create(...)
-          ...
-          eval($RESPONSE. ...)
-      - pattern: |
-          $RESPONSE = $CLIENT.chat.completions.create(...)
-          ...
-          exec($RESPONSE. ...)
-      - pattern: |
-          $RESPONSE = $CLIENT.messages.create(...)
-          ...
-          eval($RESPONSE. ...)
-      - pattern: |
-          $RESPONSE = $CLIENT.messages.create(...)
-          ...
-          exec($RESPONSE. ...)
-      - pattern: |
           $CONTENT = $RESPONSE.choices[0].message.content
           ...
           eval($CONTENT)
@@ -187,10 +171,6 @@ rules:
       references:
         - https://owasp.org/www-project-top-10-for-large-language-model-applications/
     pattern-either:
-      - pattern: |
-          $RESPONSE = await $CLIENT.chat.completions.create(...)
-          ...
-          eval($RESPONSE. ...)
       - pattern: |
           $CONTENT = $RESPONSE.choices[0].message.content
           ...
